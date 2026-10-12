@@ -1,6 +1,10 @@
 name: Build Rooyesh 3.9 ML Kit APK
 
 on:
+  push:
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - 'source-payload/**'
   workflow_dispatch:
 
 permissions:
@@ -14,8 +18,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Extract project source
-        run: tar -xzf rooyesh-source.tar.gz --strip-components=1
+      - name: Reconstruct and extract project source
+        run: |
+          cat source-payload/part*.b64 | base64 --decode > rooyesh-source.tar.gz
+          tar -tzf rooyesh-source.tar.gz >/dev/null
+          tar -xzf rooyesh-source.tar.gz --strip-components=1
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
