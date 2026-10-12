@@ -5,6 +5,8 @@
     <application
         android:allowBackup="true"
         android:label="رویش ۳.۹"
+        android:icon="@drawable/rooyesh_logo"
+        android:roundIcon="@drawable/rooyesh_logo"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@style/AppTheme">
