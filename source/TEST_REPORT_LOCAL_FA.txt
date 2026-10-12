@@ -1,0 +1,6 @@
+گزارش محیط فعلی:
+- اتصال شبکه به Google Maven از محیط محلی در دسترس نبود (خطای name resolution).
+- Gradle، Android SDK، android.jar، D8 و apksigner در محیط محلی نصب نبودند.
+- بنابراین APK مبتنی بر ML Kit از این محیط کامپایل نشده است.
+- اثر انگشت گواهی JKS موجود با امضای APKهای نصب‌شدنی ۳.۷ و ۳.۸ یکسان است؛ کلید داخل ZIP قرار نگرفته.
+- ساخت APK نهایی به CI/runner دارای Android SDK و دسترسی به Google Maven نیاز دارد.

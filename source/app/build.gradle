@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.rooyesh.study'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.rooyesh.study.app'
+        minSdk 24
+        targetSdk 34
+        versionCode 22
+        versionName '3.9'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            applicationIdSuffix '.mlkitdebug'
+            versionNameSuffix '-mlkitdebug'
+        }
+        release {
+            minifyEnabled false
+            // Signing is configured from a local untracked keystore.properties file
+            // or from GitHub Actions secrets in the cloud-build workflow.
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.google.mlkit:translate:17.0.3'
+}
+
+def signingPropertiesFile = rootProject.file('keystore.properties')
+if (signingPropertiesFile.exists()) {
+    def signingProperties = new Properties()
+    signingPropertiesFile.withInputStream { signingProperties.load(it) }
+    android.signingConfigs.create('rooyeshRelease') {
+        storeFile rootProject.file(signingProperties.getProperty('storeFile'))
+        storePassword signingProperties.getProperty('storePassword')
+        keyAlias signingProperties.getProperty('keyAlias')
+        keyPassword signingProperties.getProperty('keyPassword')
+    }
+    android.buildTypes.release.signingConfig = android.signingConfigs.rooyeshRelease
+}

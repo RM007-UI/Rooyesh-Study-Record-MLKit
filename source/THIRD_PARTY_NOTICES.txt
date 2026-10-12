@@ -1,0 +1,2 @@
+Google ML Kit: On-device translation library. See Google's official ML Kit documentation and terms: https://developers.google.com/ml-kit/language/translation/android
+Noto Sans Arabic and Inter font license texts are provided in this source kit where present; review THIRD_PARTY_LICENSES.txt before redistribution.
