@@ -76,6 +76,8 @@ jobs:
             echo "Expanded source folder is already up to date."
           else
             git commit -m "Publish expanded Rooyesh 3.9 source tree"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
