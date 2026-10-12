@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -50,10 +50,52 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
-      - name: Upload debug APK
+      - name: Prepare expanded source folder and APK
+        run: |
+          mkdir -p source dist
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.gradle/' \
+            --exclude='app/build/' \
+            --exclude='source/' \
+            --exclude='dist/' \
+            --exclude='rooyesh-source.tar.gz' \
+            --exclude='*.apk' \
+            --exclude='*.zip' \
+            ./ source/
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Rooyesh_3.9_MLKit_Debug.apk
+          test -s dist/Rooyesh_3.9_MLKit_Debug.apk
+
+      - name: Commit expanded source files to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f source
+          if git diff --cached --quiet; then
+            echo "Expanded source folder is already up to date."
+          else
+            git commit -m "Publish expanded Rooyesh 3.9 source tree"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload debug APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: rooyesh-3.9-mlkit-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: dist/Rooyesh_3.9_MLKit_Debug.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.9-mlkit-build-${{ github.run_number }}
+          name: Rooyesh 3.9 ML Kit — Build ${{ github.run_number }}
+          body: |
+            فایل نصب برنامهٔ رویش ۳.۹ با ترجمهٔ آفلاین ML Kit.
+
+            فایل `Rooyesh_3.9_MLKit_Debug.apk` را از بخش Assets دانلود کنید.
+            این نسخهٔ آزمایشی debug است؛ مدل ترجمهٔ آفلاین در اولین استفاده باید با اینترنت دانلود شود.
+          files: dist/Rooyesh_3.9_MLKit_Debug.apk
+          prerelease: true
