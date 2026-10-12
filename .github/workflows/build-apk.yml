@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/build-apk.yml'
       - 'rooyesh-source.tar.gz'
+      - 'source/**'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,12 @@ jobs:
           tar -xzf rooyesh-source.tar.gz --strip-components=1
           # DownloadConditions belongs to the common.model package in ML Kit 17.0.3.
           sed -i 's/import com.google.mlkit.nl.translate.DownloadConditions;/import com.google.mlkit.common.model.DownloadConditions;/' app/src/main/java/com/rooyesh/study/MainActivity.java
+          # Overlay custom launcher and in-app branding from the tracked source tree.
+          cp source/app/src/main/AndroidManifest.xml app/src/main/AndroidManifest.xml
+          cp source/app/src/main/assets/index.html app/src/main/assets/index.html
+          cp source/app/src/main/assets/rooyesh-logo.png app/src/main/assets/rooyesh-logo.png
+          mkdir -p app/src/main/res/drawable-nodpi
+          cp source/app/src/main/res/drawable-nodpi/rooyesh_logo.png app/src/main/res/drawable-nodpi/rooyesh_logo.png
 
       - name: Set up Java 17
         uses: actions/setup-java@v5
