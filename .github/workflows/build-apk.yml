@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/build-apk.yml'
-      - 'source-payload/**'
+      - 'rooyesh-source.tar.gz'
   workflow_dispatch:
 
 permissions:
@@ -18,9 +18,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Reconstruct and extract project source
+      - name: Verify and extract project source
         run: |
-          cat source-payload/part*.b64 | base64 --decode > rooyesh-source.tar.gz
           tar -tzf rooyesh-source.tar.gz >/dev/null
           tar -xzf rooyesh-source.tar.gz --strip-components=1
 
