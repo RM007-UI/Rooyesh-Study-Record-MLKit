@@ -1,12 +1,18 @@
-name: Build Rooyesh 3.9 ML Kit APK
+name: Build and release Rooyesh 3.9.1
 
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/build-apk.yml'
-      - 'rooyesh-source.tar.gz'
       - 'source/**'
+      - 'README.md'
+      - 'rooyesh-source.tar.gz'
   workflow_dispatch:
+
+concurrency:
+  group: rooyesh-apk-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -14,30 +20,26 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-      - name: Verify and extract project source
+      - name: Prepare project from canonical tracked source
+        shell: bash
         run: |
-          tar -tzf rooyesh-source.tar.gz >/dev/null
-          tar -xzf rooyesh-source.tar.gz --strip-components=1
-          # DownloadConditions belongs to the common.model package in ML Kit 17.0.3.
-          sed -i 's/import com.google.mlkit.nl.translate.DownloadConditions;/import com.google.mlkit.common.model.DownloadConditions;/' app/src/main/java/com/rooyesh/study/MainActivity.java
-          # Overlay custom launcher and in-app branding from the tracked source tree.
-          cp source/app/src/main/AndroidManifest.xml app/src/main/AndroidManifest.xml
-          cp source/app/src/main/assets/index.html app/src/main/assets/index.html
-          cp source/app/src/main/assets/rooyesh-logo.png app/src/main/assets/rooyesh-logo.png
-          mkdir -p app/src/main/res/drawable-nodpi
-          cp source/app/src/main/res/drawable-nodpi/rooyesh_logo.png app/src/main/res/drawable-nodpi/rooyesh_logo.png
-          # Bundle the web fonts referenced by index.html so WebView never falls back to the phone's system font.
-          mkdir -p app/src/main/assets/fonts
-          curl -fLsS 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.2.6/files/noto-sans-arabic-arabic-400-normal.woff2' -o app/src/main/assets/fonts/noto-arabic-regular.woff2
-          curl -fLsS 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.2.6/files/noto-sans-arabic-arabic-700-normal.woff2' -o app/src/main/assets/fonts/noto-arabic-bold.woff2
-          curl -fLsS 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.6/files/inter-latin-400-normal.woff2' -o app/src/main/assets/fonts/inter-regular.woff2
-          curl -fLsS 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.6/files/inter-latin-500-normal.woff2' -o app/src/main/assets/fonts/inter-medium.woff2
-          curl -fLsS 'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.2.6/files/inter-latin-700-normal.woff2' -o app/src/main/assets/fonts/inter-bold.woff2
+          set -euo pipefail
+          test -s source/app/src/main/assets/index.html
+          test -s source/app/src/main/java/com/rooyesh/study/MainActivity.java
+          test -s source/app/src/main/assets/translator_offline.js
+          rm -rf app tools
+          cp -a source/app app
+          cp -a source/tools tools
+          cp source/build.gradle build.gradle
+          cp source/settings.gradle settings.gradle
+          cp source/gradle.properties gradle.properties
           test -s app/src/main/assets/fonts/noto-arabic-regular.woff2
           test -s app/src/main/assets/fonts/noto-arabic-bold.woff2
           test -s app/src/main/assets/fonts/inter-regular.woff2
@@ -61,62 +63,121 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Check JavaScript syntax and ML Kit bridge
+      - name: Check JavaScript syntax and app bridge integrity
+        shell: bash
         run: |
+          set -euo pipefail
           python3 tools/check_html_js.py app/src/main/assets/index.html app/src/main/assets/translator_offline.js
           python3 tools/verify_mlkit_bridge.py
+          grep -q "function persistTimerRecovery" app/src/main/assets/index.html
+          grep -q "savedAt:now" app/src/main/assets/index.html
+          grep -q "window.RooyeshNative.timerFinished" app/src/main/assets/index.html
+          ! grep -q "window.AndroidBridge.timerFinished" app/src/main/assets/index.html
+          grep -q "public boolean timerFinished(String subject)" app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q "requestNotificationPermission" app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q "android.permission.POST_NOTIFICATIONS" app/src/main/AndroidManifest.xml
 
       - name: Build debug APK
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
-
-      - name: Prepare expanded source folder and APK
         run: |
-          mkdir -p source dist
-          rsync -a \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.gradle/' \
-            --exclude='app/build/' \
-            --exclude='source/' \
-            --exclude='dist/' \
-            --exclude='rooyesh-source.tar.gz' \
-            --exclude='*.apk' \
-            --exclude='*.zip' \
-            ./ source/
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Rooyesh_3.9_MLKit_Debug.apk
-          test -s dist/Rooyesh_3.9_MLKit_Debug.apk
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Rooyesh_3.9.1_MLKit_Debug.apk
+          test -s dist/Rooyesh_3.9.1_MLKit_Debug.apk
 
-      - name: Commit expanded source files to repository
+      - name: Check release signing secrets
+        id: signing
+        shell: bash
+        env:
+          ROOYESH_KEYSTORE_B64: ${{ secrets.ROOYESH_KEYSTORE_B64 }}
+          ROOYESH_STORE_PASSWORD: ${{ secrets.ROOYESH_STORE_PASSWORD }}
+          ROOYESH_KEY_ALIAS: ${{ secrets.ROOYESH_KEY_ALIAS }}
+          ROOYESH_KEY_PASSWORD: ${{ secrets.ROOYESH_KEY_PASSWORD }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f source
-          if git diff --cached --quiet; then
-            echo "Expanded source folder is already up to date."
-          else
-            git commit -m "Publish expanded Rooyesh 3.9 source tree"
-            git fetch origin "${GITHUB_REF_NAME}"
-            git rebase "origin/${GITHUB_REF_NAME}"
+          set -euo pipefail
+          if [[ -z "${ROOYESH_KEYSTORE_B64:-}" || -z "${ROOYESH_STORE_PASSWORD:-}" || -z "${ROOYESH_KEY_ALIAS:-}" || -z "${ROOYESH_KEY_PASSWORD:-}" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Release signing secrets are incomplete. Only the separate debug build will be published."
+            exit 0
+          fi
+          printf '%s' "$ROOYESH_KEYSTORE_B64" | base64 --decode > release-keystore.jks
+          test -s release-keystore.jks
+          cat > keystore.properties <<EOF
+          storeFile=release-keystore.jks
+          storePassword=$ROOYESH_STORE_PASSWORD
+          keyAlias=$ROOYESH_KEY_ALIAS
+          keyPassword=$ROOYESH_KEY_PASSWORD
+          EOF
+          keytool -list -keystore release-keystore.jks -storepass "$ROOYESH_STORE_PASSWORD" -alias "$ROOYESH_KEY_ALIAS" >/dev/null
+          echo "available=true" >> "$GITHUB_OUTPUT"
+          echo "Existing release signing material validated."
+
+      - name: Build and verify installable release APK
+        if: steps.signing.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :app:assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk dist/Rooyesh_3.9.1.apk
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose dist/Rooyesh_3.9.1.apk
+          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging dist/Rooyesh_3.9.1.apk | grep -q "package: name='com.rooyesh.study.app'"
+          sha256sum dist/Rooyesh_3.9.1.apk
+
+      - name: Synchronize downloadable source archive
+        id: sync_source
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar --sort=name --mtime='@1609459200' --owner=0 --group=0 --numeric-owner -cf - -C source . | gzip -n > /tmp/rooyesh-source.tar.gz
+          if ! cmp -s /tmp/rooyesh-source.tar.gz rooyesh-source.tar.gz; then
+            cp /tmp/rooyesh-source.tar.gz rooyesh-source.tar.gz
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add rooyesh-source.tar.gz
+            git commit -m "Sync downloadable source archive with canonical source"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+          echo "target_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: rooyesh-3.9-mlkit-debug
-          path: dist/Rooyesh_3.9_MLKit_Debug.apk
+          name: rooyesh-3.9.1-debug-apk
+          path: dist/Rooyesh_3.9.1_MLKit_Debug.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
 
-      - name: Publish APK to GitHub Releases
+      - name: Publish stable signed APK
+        if: steps.signing.outputs.available == 'true' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.9-mlkit-build-${{ github.run_number }}
-          name: Rooyesh 3.9 ML Kit — Build ${{ github.run_number }}
+          tag_name: v3.9.1
+          target_commitish: ${{ steps.sync_source.outputs.target_sha }}
+          name: Rooyesh 3.9.1 — نسخهٔ پایدار
           body: |
-            فایل نصب برنامهٔ رویش ۳.۹ با ترجمهٔ آفلاین ML Kit.
+            نسخهٔ پایدار رویش ۳.۹.۱ برای نصب و به‌روزرسانی نسخهٔ اصلی.
 
-            فایل `Rooyesh_3.9_MLKit_Debug.apk` را از بخش Assets دانلود کنید.
-            این نسخهٔ آزمایشی debug است؛ مدل ترجمهٔ آفلاین در اولین استفاده باید با اینترنت دانلود شود.
-          files: dist/Rooyesh_3.9_MLKit_Debug.apk
+            اصلاحات:
+            - ذخیره و بازیابی وضعیت تایمر هنگام رفتن برنامه به پس‌زمینه
+            - محاسبهٔ زمان سپری‌شده هنگام بسته بودن برنامه
+            - اتصال اعلان پایان تایمر به Android و درخواست مجوز اعلان در Android 13+
+            - بررسی نحو JavaScript و پل بومی پیش از ساخت
+            - افزایش versionCode برای امکان به‌روزرسانی
+          files: dist/Rooyesh_3.9.1.apk
+          prerelease: false
+          make_latest: true
+
+      - name: Publish debug-only fallback release
+        if: steps.signing.outputs.available != 'true' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.9.1-debug-build-${{ github.run_number }}
+          target_commitish: ${{ steps.sync_source.outputs.target_sha }}
+          name: Rooyesh 3.9.1 — Debug build ${{ github.run_number }}
+          body: |
+            نسخهٔ آزمایشی debug فقط برای تست است و شناسهٔ جداگانه دارد.
+            این فایل جایگزین نصب اصلی قبلی نمی‌شود. برای انتشار نسخهٔ اصلی، کلید امضای قبلی باید به‌صورت GitHub Actions Secrets تنظیم شود.
+          files: dist/Rooyesh_3.9.1_MLKit_Debug.apk
           prerelease: true
+          make_latest: false
