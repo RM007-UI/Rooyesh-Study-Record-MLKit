@@ -92,14 +92,43 @@ public final class StudyNotifications {
     }
 
     private static String todaySolarLabel() {
-        Date now = new Date();
-        android.icu.util.PersianCalendar persian = new android.icu.util.PersianCalendar(new Locale("fa", "IR"));
-        persian.setTime(now);
-        android.icu.text.SimpleDateFormat format =
-                new android.icu.text.SimpleDateFormat("d MMMM yyyy", new Locale("fa", "IR"));
-        format.setCalendar(persian);
-        format.setTimeZone(android.icu.util.TimeZone.getDefault());
-        return format.format(now);
+        Calendar g = Calendar.getInstance();
+        int gy = g.get(Calendar.YEAR);
+        int gm = g.get(Calendar.MONTH) + 1;
+        int gd = g.get(Calendar.DAY_OF_MONTH);
+
+        int[] gDays = {31, isGregorianLeap(gy) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        int gDayNo = 365 * (gy - 1600)
+                + (gy - 1600 + 3) / 4
+                - (gy - 1600 + 99) / 100
+                + (gy - 1600 + 399) / 400;
+        for (int i = 0; i < gm - 1; i++) gDayNo += gDays[i];
+        gDayNo += gd - 1;
+
+        int jDayNo = gDayNo - 79;
+        int jNp = jDayNo / 12053;
+        jDayNo %= 12053;
+        int jy = 979 + 33 * jNp + 4 * (jDayNo / 1461);
+        jDayNo %= 1461;
+        if (jDayNo >= 366) {
+            jy += (jDayNo - 1) / 365;
+            jDayNo = (jDayNo - 1) % 365;
+        }
+
+        int[] jDays = {31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29};
+        int jm = 0;
+        while (jm < 11 && jDayNo >= jDays[jm]) {
+            jDayNo -= jDays[jm];
+            jm++;
+        }
+        int jd = jDayNo + 1;
+        String[] months = {"فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+                "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"};
+        return number(jd) + " " + months[jm] + " " + number(jy);
+    }
+
+    private static boolean isGregorianLeap(int year) {
+        return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
     }
 
     private static String number(int value) {
