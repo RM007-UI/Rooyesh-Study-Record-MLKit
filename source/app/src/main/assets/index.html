@@ -237,7 +237,9 @@ body.dark-mode .translator-model-tools{background:rgba(45,65,48,.22)}
 <div class="settings-card"><div class="settings-icon">◐</div><div class="settings-content"><h4>حالت ظاهری</h4><p>پوستهٔ روشن یا تاریک را انتخاب کن؛ حالت سیستم با تنظیمات گوشی هماهنگ می‌شود.</p><select class="input" id="themeSelect" aria-label="حالت ظاهری"><option value="system">مطابق سیستم</option><option value="light">روشن</option><option value="dark">تاریک</option></select></div></div>
 <div class="settings-card"><div class="settings-icon">◌</div><div class="settings-content"><h4>بلور شیشه‌ای</h4><p>محو شدن پس‌زمینهٔ کارت‌ها را روشن یا خاموش کن؛ خاموش کردنش روی گوشی‌های ضعیف‌تر سبک‌تر است.</p><select class="input" id="blurSelect" aria-label="بلور شیشه‌ای"><option value="on">فعال</option><option value="off">خاموش</option></select></div></div>
 <div class="settings-card"><div class="settings-icon">♬</div><div class="settings-content"><h4>صدای پایان تایمر</h4><p>اعلان تقویم مطالعه پس از اجازهٔ سیستم همیشه در اعلان‌ها می‌ماند؛ اگر تا ساعت ۱۳ شروع نکرده باشی، یادآوری ملایمی می‌آید.</p><button class="btn btn-primary" id="testNotification" type="button">آزمایش اعلان و صدا</button><p class="settings-note" id="notificationHint">برای اعلان پیوسته و یادآوری روزانه، اجازهٔ اعلان اندروید را فعال کن.</p></div></div>
-<div class="settings-card"><div class="settings-icon">✦</div><div class="settings-content"><h4>درباره‌ی رویش</h4><p>یک فضای آرام برای ساختن عادت‌های کوچک و پیوسته.</p><div class="powered">Powered by <strong>Mina &amp; Reza</strong></div><p class="settings-note">نسخه ۳.۱۰.۱ · طراحی‌شده برای تمرکز، نه حواس‌پرتی.</p></div></div>
+<div class="settings-card"><div class="settings-icon">⏰</div><div class="settings-content"><h4>زنگ شخصی تو</h4><p>یه زنگ خوش‌آهنگ و کوتاه برای شروع روز یا وقت مطالعه تنظیم کن. ساعت، تکرار و شدت صدا دست خودته.</p><div id="studyAlarmControls"><label class="study-alarm-field">ساعت زنگ<input class="input" id="studyAlarmTime" type="time" value="08:00" aria-label="ساعت زنگ"></label><label class="study-alarm-check"><input id="studyAlarmRepeat" type="checkbox" checked> هر روز تکرار بشه</label><label class="study-alarm-field">شدت صدای زنگ <output id="studyAlarmVolumeValue">90٪</output><input id="studyAlarmVolume" type="range" min="35" max="100" step="5" value="90"></label><p class="settings-note">یه ملودی کوتاه و هماهنگ پخش می‌شه؛ بلندی نهایی به تنظیم صدای زنگ گوشی هم بستگی داره.</p><div class="actions study-alarm-actions"><button class="btn btn-soft" id="studyAlarmPreview" type="button">♫ شنیدن صدا</button><button class="btn btn-primary" id="studyAlarmSave" type="button">ذخیرهٔ زنگ</button><button class="btn btn-quiet" id="studyAlarmCancel" type="button">خاموش کردن</button></div><p class="settings-note" id="studyAlarmStatus" role="status" aria-live="polite">هنوز زنگی تنظیم نشده.</p></div></div></div>
+<div class="settings-card"><div class="settings-icon">⬆</div><div class="settings-content"><h4>به‌روزرسانی از گیت‌هاب</h4><p>آخرین نسخه رو مستقیم از گیت‌هاب بگیر؛ بعد از دانلود، فایل رو باز کن و «به‌روزرسانی» رو بزن.</p><button class="btn btn-primary" id="githubUpdateBtn" type="button">دانلود آخرین نسخه</button><p class="settings-note">برای حفظ سوابق، برنامه رو حذف نکن؛ فایل جدید رو روی نسخهٔ فعلی نصب کن.</p></div></div>
+<div class="settings-card"><div class="settings-icon">✦</div><div class="settings-content"><h4>دربارهٔ رویش</h4><p>یه جای خلوت برای ثبت مطالعه و قدم‌های کوچیکت.</p><p class="settings-note"><strong>سازنده و منبع:</strong> مخزن گیت‌هاب رویش</p><p class="settings-note">RM007-UI / Rooyesh-Study-Record-MLKit</p><button class="btn btn-soft" id="githubSourceBtn" type="button">دیدن مخزن و کد منبع</button><p class="settings-note">نسخهٔ ۳.۱۱.۰ · آروم‌آروم، ولی پیوسته 🌱</p></div></div>
 </section>
 </div>
 <footer class="bottom"><span>رویش · نسخه‌ی سبک برای تمرکز بیشتر</span><span>کم‌کم، ولی پیوسته 🌿</span></footer>
@@ -247,6 +249,17 @@ body.dark-mode .translator-model-tools{background:rgba(45,65,48,.22)}
 <script src="translator_offline.js"></script>
 <script src="study_mood.js"></script>
 <script src="study_tools.js"></script>
+<style>
+#studyAlarmControls{display:grid;gap:11px;margin-top:10px}
+.study-alarm-field{display:grid;gap:7px;font-size:12px;font-weight:700;color:var(--muted)}
+.study-alarm-field input[type=time]{width:100%}
+.study-alarm-field input[type=range]{width:100%;accent-color:var(--green)}
+.study-alarm-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink)}
+.study-alarm-check input{width:18px;height:18px;accent-color:var(--green)}
+.study-alarm-actions{display:flex;flex-wrap:wrap;gap:8px}
+.study-alarm-actions .btn{flex:1 1 110px}
+</style>
+<script src="study_alarm.js"></script>
 <script>
 (()=>{'use strict';
 /* Small compatibility helpers for older Android System WebView builds. */
