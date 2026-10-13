@@ -2,7 +2,12 @@ package com.rooyesh.study;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -40,12 +45,15 @@ import java.util.Set;
  */
 public final class MainActivity extends Activity {
     private static final int REQUEST_WRITE_STORAGE = 555;
+    private static final int REQUEST_POST_NOTIFICATIONS = 556;
+    private static final String TIMER_NOTIFICATION_CHANNEL = "rooyesh-study-timer";
     private WebView webView;
     private final Map<String, Translator> translators = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        ensureTimerNotificationChannel();
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -127,6 +135,48 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void ensureTimerNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager == null || manager.getNotificationChannel(TIMER_NOTIFICATION_CHANNEL) != null) return;
+        NotificationChannel channel = new NotificationChannel(
+                TIMER_NOTIFICATION_CHANNEL, "رویش | اعلان‌های مطالعه", NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("یادآوری پایان تایمر مطالعه");
+        manager.createNotificationChannel(channel);
+    }
+
+    private boolean showTimerNotification(String subject) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (manager == null) return false;
+            String label = subject == null || subject.trim().isEmpty() ? "مطالعه" : subject.trim();
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, pendingFlags);
+            String message = "جلسهٔ " + label + " به پایان رسید.";
+            Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    ? new Notification.Builder(this, TIMER_NOTIFICATION_CHANNEL)
+                    : new Notification.Builder(this);
+            builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentTitle("رویش | پایان زمان مطالعه")
+                    .setContentText(message)
+                    .setStyle(new Notification.BigTextStyle().bigText(message))
+                    .setAutoCancel(true)
+                    .setContentIntent(pendingIntent);
+            int notificationId = (int) (System.currentTimeMillis() & 0x7fffffffL);
+            manager.notify(notificationId, builder.build());
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     private void sendResult(String requestId, String action, boolean success, String message,
                             String text, Boolean modelReady, String errorCode) {
         JSONObject event = new JSONObject();
@@ -194,6 +244,28 @@ public final class MainActivity extends Activity {
 
     public final class RooyeshNative {
         RooyeshNative() { /* Keep a native bridge instance per WebView. */ }
+
+        /** Requests Android 13+ notification permission after an explicit tap in the UI. */
+        @JavascriptInterface
+        public String requestNotificationPermission() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                    || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                return "granted";
+            }
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+                }
+            });
+            return "requested";
+        }
+
+        /** Posts a system notification when the study countdown ends. */
+        @JavascriptInterface
+        public boolean timerFinished(String subject) {
+            return showTimerNotification(subject);
+        }
 
         /** Saves a generated PDF in the public Downloads folder. */
         @JavascriptInterface
