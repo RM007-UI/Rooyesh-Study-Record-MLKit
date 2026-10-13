@@ -140,7 +140,7 @@ function decorateCalendar(){
  grid.querySelectorAll('.calendar-day[data-calendar-date]').forEach(cell=>{
   const date=cell.getAttribute('data-calendar-date'),entry=getEntry(date);
   let marker=cell.querySelector('.cal-mood-mark');
-  if(entry){cell.classList.add('has-mood');if(!marker){marker=document.createElement('span');marker.className='cal-mood-mark';marker.setAttribute('aria-hidden','true');cell.appendChild(marker)}marker.textContent=entry.emoji;cell.setAttribute('title',date+' · '+entry.emoji+' '+(entry.label||''))}
+  if(entry){cell.classList.add('has-mood');if(!marker){marker=document.createElement('span');marker.className='cal-mood-mark';marker.setAttribute('aria-hidden','true');cell.appendChild(marker)}if(marker.textContent!==entry.emoji)marker.textContent=entry.emoji;cell.setAttribute('title',date+' · '+entry.emoji+' '+(entry.label||''))}
   else{cell.classList.remove('has-mood');if(marker)marker.remove()}
  });
  updateSelectedMood(findSelectedDate());renderReports();
