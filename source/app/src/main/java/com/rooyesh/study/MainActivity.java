@@ -53,7 +53,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        ensureTimerNotificationChannel();
+        StudyNotifications.ensureChannels(this);
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -68,6 +68,28 @@ public final class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient());
         setContentView(webView);
         webView.loadUrl("file:///android_asset/index.html");
+        StudyNotifications.scheduleDailyAlarms(this);
+        requestNotificationsOnStartup();
+    }
+
+    private void requestNotificationsOnStartup() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+        } else {
+            StudyNotifications.refreshCalendarFromPrefs(this);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_POST_NOTIFICATIONS) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                    || (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                StudyNotifications.refreshCalendarFromPrefs(this);
+            }
+        }
     }
 
     @Override
@@ -163,7 +185,7 @@ public final class MainActivity extends Activity {
             Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                     ? new Notification.Builder(this, TIMER_NOTIFICATION_CHANNEL)
                     : new Notification.Builder(this);
-            builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+            builder.setSmallIcon(R.drawable.ic_stat_rooyesh)
                     .setContentTitle("رویش | پایان زمان مطالعه")
                     .setContentText(message)
                     .setStyle(new Notification.BigTextStyle().bigText(message))
@@ -259,6 +281,14 @@ public final class MainActivity extends Activity {
                 }
             });
             return "requested";
+        }
+
+        /** Keeps the persistent calendar notification in sync with the current day. */
+        @JavascriptInterface
+        public void studyProgress(int minutes, int dailyGoal) {
+            final int safeMinutes = Math.max(0, Math.min(1440 * 30, minutes));
+            final int safeGoal = Math.max(1, Math.min(1440, dailyGoal));
+            runOnUiThread(() -> StudyNotifications.updateProgress(MainActivity.this, safeMinutes, safeGoal));
         }
 
         /** Posts a system notification when the study countdown ends. */
