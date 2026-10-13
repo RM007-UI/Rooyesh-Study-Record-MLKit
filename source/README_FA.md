@@ -1,8 +1,8 @@
-# رویش ۳.۹ — سورس کامل با ML Kit واقعی و پشتیبان کامل
+# رویش ۳.۹.۱ — سورس کامل با ML Kit واقعی و پشتیبان کامل
 
 این پروژه نسخهٔ فعلی رابط رویش (یادداشت‌ها، برنامه‌ریز، PDF، تقویم شمسی/میلادی، درخت رشد، تنظیمات و پشتیبان کامل) را با میزبان بومی Android WebView و موتور ترجمهٔ آفلاین Google ML Kit ترکیب می‌کند.
 
-**این ZIP خودش APK نیست.** در محیط ساخت گفتگو Android SDK، Gradle و دسترسی شبکه به Google Maven موجود نبود. برای ساخت APK، workflow از GitHub Actions و runner لینوکسی استفاده می‌کند تا وابستگی رسمی را دریافت و کد را واقعاً کامپایل کند.
+**این ZIP خودش APK نیست.** در محیط محلی Android SDK و دسترسی شبکه به Google Maven در دسترس نیست. گردش‌کار GitHub Actions پوشهٔ source/ را مرجع قطعی کد می‌گیرد، آزمون‌های ایستا را اجرا می‌کند و با Android SDK کد را کامپایل می‌کند.
 
 ## قابلیت‌های مترجم ML Kit
 
@@ -17,22 +17,11 @@
 
 Workflow در `.github/workflows/build-apk.yml` با اجرای دستی (`workflow_dispatch`) ساخته شده است. بعد از قرار دادن پوشهٔ پروژه در یک مخزن خصوصی GitHub، از تب **Actions** workflow با نام **Build Rooyesh 3.9 ML Kit APK** را اجرا کن.
 
-### APK آزمایشی
+### APK اصلی و نسخهٔ آزمایشی
 
-Workflow همیشه یک APK آزمایشی با شناسهٔ جداگانهٔ `com.rooyesh.study.app.mlkitdebug` می‌سازد. می‌توان آن را کنار نسخهٔ فعلی نصب کرد و مترجم را آزمایش کرد؛ داده‌های این نسخه با برنامهٔ اصلی مشترک نیستند.
-
-### APK قابل‌به‌روزرسانی روی نسخهٔ فعلی
-
-برای خروجی انتشار با شناسهٔ `com.rooyesh.study.app` و سازگار با نصب قبلی، باید کلید موجود رویش از طریق **GitHub Actions Secrets** ارائه شود. کلید خصوصی هرگز نباید در مخزن یا ZIP قرار داده شود.
-
-Secrets موردنیاز:
-
-- `ROOYESH_KEYSTORE_B64`: محتوای فایل JKS کدگذاری‌شده با Base64، بدون خط جدید
-- `ROOYESH_STORE_PASSWORD`: رمز keystore
-- `ROOYESH_KEY_ALIAS`: مقدار alias همان کلید انتشار موجود
-- `ROOYESH_KEY_PASSWORD`: رمز کلید
-
-این موارد را فقط از طریق صفحهٔ **Settings → Secrets and variables → Actions** در مخزن خصوصی اضافه کن. آن‌ها را در Issue، فایل، چت عمومی یا تاریخچهٔ Git commit نکن. اگر Secrets تنظیم نشده باشند، workflow فقط APK آزمایشی را می‌سازد؛ خروجی debug جایگزین ۳.۸ نیست و نمی‌تواند روی آن به‌روزرسانی شود.
+- وقتی چهار Secret امضای قبلی (ROOYESH_KEYSTORE_B64، ROOYESH_STORE_PASSWORD، ROOYESH_KEY_ALIAS و ROOYESH_KEY_PASSWORD) تنظیم باشند، workflow نسخهٔ Release با شناسهٔ com.rooyesh.study.app و نسخهٔ 3.9.1 را می‌سازد؛ امضا با همان کلید قدیمی اجازه می‌دهد برنامه روی نسخهٔ اصلی قبلی به‌روزرسانی شود.
+- اگر کلید امضا حاضر نباشد، workflow فقط نسخهٔ Debug با شناسهٔ جداگانهٔ com.rooyesh.study.app.mlkitdebug می‌سازد و صریحاً آن را به‌عنوان آزمایشی منتشر می‌کند. APK آزمایشی جای نسخهٔ اصلی نصب‌شده را نمی‌گیرد.
+- کلید خصوصی یا فایل keystore.properties را در مخزن یا آرشیو سورس قرار نده. فقط از GitHub Actions Secrets استفاده کن.
 
 ## اجرای محلی با Android Studio
 
