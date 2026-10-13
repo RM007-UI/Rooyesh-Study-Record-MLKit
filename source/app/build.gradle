@@ -10,8 +10,8 @@ android {
         applicationId 'com.rooyesh.study.app'
         minSdk 24
         targetSdk 34
-        versionCode 26
-        versionName '3.10.2'
+        versionCode 27
+        versionName '3.11.0'
     }
 
     compileOptions {

@@ -93,6 +93,16 @@ public final class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        StudyAlarmManager.restoreIfEnabled(this);
+        if (webView != null) {
+            webView.post(() -> webView.evaluateJavascript(
+                    "window.RooyeshAlarmUI && window.RooyeshAlarmUI.onResume()", null));
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         for (Translator translator : translators.values()) {
             try { translator.close(); } catch (Exception ignored) { }
@@ -289,6 +299,65 @@ public final class MainActivity extends Activity {
             final int safeMinutes = Math.max(0, Math.min(1440 * 30, minutes));
             final int safeGoal = Math.max(1, Math.min(1440, dailyGoal));
             runOnUiThread(() -> StudyNotifications.updateProgress(MainActivity.this, safeMinutes, safeGoal));
+        }
+
+        /** Reads the saved daily alarm settings for the settings page. */
+        @JavascriptInterface
+        public String getStudyAlarmConfig() {
+            return StudyAlarmManager.configJson(MainActivity.this);
+        }
+
+        /** Stores the user's daily alarm and requests exact-alarm access when needed. */
+        @JavascriptInterface
+        public String scheduleStudyAlarm(String time, boolean repeatDaily, int volumePercent) {
+            if (!StudyAlarmManager.isValidTime(time)) return "invalid";
+            StudyAlarmManager.saveAndSchedule(MainActivity.this, time, repeatDaily, volumePercent);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    && !StudyAlarmManager.canScheduleExact(MainActivity.this)) {
+                runOnUiThread(() -> {
+                    try {
+                        Intent settingsIntent = new Intent(
+                                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                Uri.parse("package:" + getPackageName()));
+                        startActivity(settingsIntent);
+                    } catch (Exception ignored) { }
+                });
+                return "permission_required";
+            }
+            return "scheduled";
+        }
+
+        /** Plays the short built-in chime for preview. */
+        @JavascriptInterface
+        public String previewStudyAlarm(int volumePercent) {
+            StudyAlarmService.start(MainActivity.this, StudyAlarmService.ACTION_PREVIEW, volumePercent);
+            return "playing";
+        }
+
+        /** Disables the alarm and stops currently playing audio. */
+        @JavascriptInterface
+        public void cancelStudyAlarm() {
+            StudyAlarmManager.cancel(MainActivity.this);
+        }
+
+        /** Opens the newest stable APK download from the official repository. */
+        @JavascriptInterface
+        public void openGitHubUpdates() {
+            openExternalPage("https://github.com/RM007-UI/Rooyesh-Study-Record-MLKit/releases/latest/download/Rooyesh.apk");
+        }
+
+        /** Opens the project's source repository. */
+        @JavascriptInterface
+        public void openGitHubSource() {
+            openExternalPage("https://github.com/RM007-UI/Rooyesh-Study-Record-MLKit");
+        }
+
+        private void openExternalPage(String address) {
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(address)));
+                } catch (Exception ignored) { }
+            });
         }
 
         /** Posts a system notification when the study countdown ends. */

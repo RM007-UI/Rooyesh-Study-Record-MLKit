@@ -11,5 +11,6 @@ public final class BootReceiver extends BroadcastReceiver {
         StudyNotifications.ensureChannels(context);
         StudyNotifications.scheduleDailyAlarms(context);
         StudyNotifications.refreshCalendarFromPrefs(context);
+        StudyAlarmManager.restoreIfEnabled(context);
     }
 }
