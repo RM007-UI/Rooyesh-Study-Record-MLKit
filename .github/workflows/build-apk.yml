@@ -1,4 +1,4 @@
-name: Build and release Rooyesh 3.9.1
+name: Build and release Rooyesh 3.10.0
 
 on:
   push:
@@ -33,6 +33,12 @@ jobs:
           test -s source/app/src/main/assets/index.html
           test -s source/app/src/main/java/com/rooyesh/study/MainActivity.java
           test -s source/app/src/main/assets/translator_offline.js
+          test -s source/app/src/main/assets/study_mood.js
+          test -s source/app/src/main/assets/study_tools.js
+          test -s source/app/src/main/res/drawable/ic_stat_rooyesh.xml
+          test -s source/app/src/main/java/com/rooyesh/study/StudyNotifications.java
+          test -s source/app/src/main/java/com/rooyesh/study/DailyReminderReceiver.java
+          test -s source/app/src/main/java/com/rooyesh/study/BootReceiver.java
           rm -rf app tools
           cp -a source/app app
           cp -a source/tools tools
@@ -66,7 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/check_html_js.py app/src/main/assets/index.html app/src/main/assets/translator_offline.js
+          python3 tools/check_html_js.py app/src/main/assets/index.html app/src/main/assets/translator_offline.js app/src/main/assets/study_mood.js app/src/main/assets/study_tools.js
           python3 tools/verify_mlkit_bridge.py
           grep -q "function persistTimerRecovery" app/src/main/assets/index.html
           grep -q "savedAt:now" app/src/main/assets/index.html
@@ -75,14 +81,19 @@ jobs:
           grep -q "public boolean timerFinished(String subject)" app/src/main/java/com/rooyesh/study/MainActivity.java
           grep -q "requestNotificationPermission" app/src/main/java/com/rooyesh/study/MainActivity.java
           grep -q "android.permission.POST_NOTIFICATIONS" app/src/main/AndroidManifest.xml
+          grep -q "android.permission.RECEIVE_BOOT_COMPLETED" app/src/main/AndroidManifest.xml
+          grep -q "public void studyProgress(int minutes, int dailyGoal)" app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q "R.drawable.ic_stat_rooyesh" app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q "StudyNotifications.scheduleDailyAlarms" app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q "onStudyDataUpdated" app/src/main/assets/index.html
 
       - name: Build debug APK
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace :app:assembleDebug
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Rooyesh_3.9.1_MLKit_Debug.apk
-          test -s dist/Rooyesh_3.9.1_MLKit_Debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Rooyesh_3.10.0_MLKit_Debug.apk
+          test -s dist/Rooyesh_3.10.0_MLKit_Debug.apk
 
       - name: Check release signing secrets
         id: signing
@@ -117,11 +128,11 @@ jobs:
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace :app:assembleRelease
-          cp app/build/outputs/apk/release/app-release.apk dist/Rooyesh_3.9.1.apk
+          cp app/build/outputs/apk/release/app-release.apk dist/Rooyesh_3.10.0.apk
           SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose dist/Rooyesh_3.9.1.apk
-          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging dist/Rooyesh_3.9.1.apk | grep -q "package: name='com.rooyesh.study.app'"
-          sha256sum dist/Rooyesh_3.9.1.apk
+          "$SDK_ROOT/build-tools/35.0.0/apksigner" verify --verbose dist/Rooyesh_3.10.0.apk
+          "$SDK_ROOT/build-tools/35.0.0/aapt" dump badging dist/Rooyesh_3.10.0.apk | grep -q "package: name='com.rooyesh.study.app'"
+          sha256sum dist/Rooyesh_3.10.0.apk
 
       - name: Synchronize downloadable source archive
         id: sync_source
@@ -142,8 +153,8 @@ jobs:
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: rooyesh-3.9.1-debug-apk
-          path: dist/Rooyesh_3.9.1_MLKit_Debug.apk
+          name: rooyesh-3.10.0-debug-apk
+          path: dist/Rooyesh_3.10.0_MLKit_Debug.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -151,19 +162,24 @@ jobs:
         if: steps.signing.outputs.available == 'true' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.9.1
+          tag_name: v3.10.0
           target_commitish: ${{ steps.sync_source.outputs.target_sha }}
-          name: Rooyesh 3.9.1 — نسخهٔ پایدار
+          name: Rooyesh 3.10.0 — نسخهٔ پایدار
           body: |
             نسخهٔ پایدار رویش ۳.۹.۱ برای نصب و به‌روزرسانی نسخهٔ اصلی.
 
             اصلاحات:
             - ذخیره و بازیابی وضعیت تایمر هنگام رفتن برنامه به پس‌زمینه
             - محاسبهٔ زمان سپری‌شده هنگام بسته بودن برنامه
-            - اتصال اعلان پایان تایمر به Android و درخواست مجوز اعلان در Android 13+
+            - درخواست مجوز اعلان از همان شروع برنامه و نمایش نشان تک‌رنگ روی اعلان‌ها
+            - اعلان پایدار تقویم مطالعه، بازنشانی روزانه و یادآوری ساعت ۱۳ در صورت شروع‌نکردن
+            - ثبت حال‌وهوای هر روز پس از تکمیل هدف، همراه پیام‌های متناسب و بدون تکرار تا پایان مجموعه
+            - گزارش هفتگی/ماهانهٔ حال‌وهوا و نشان هر روز در تقویم
+            - جعبه ابزار درسی با ترجمه، خلاصه قواعد عربی و جدول جست‌وجوپذیر ۱۱۸ عنصر
+            - اتصال اعلان پایان تایمر به Android
             - بررسی نحو JavaScript و پل بومی پیش از ساخت
             - افزایش versionCode برای امکان به‌روزرسانی
-          files: dist/Rooyesh_3.9.1.apk
+          files: dist/Rooyesh_3.10.0.apk
           prerelease: false
           make_latest: true
 
@@ -171,12 +187,12 @@ jobs:
         if: steps.signing.outputs.available != 'true' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.9.1-debug-build-${{ github.run_number }}
+          tag_name: v3.10.0-debug-build-${{ github.run_number }}
           target_commitish: ${{ steps.sync_source.outputs.target_sha }}
-          name: Rooyesh 3.9.1 — Debug build ${{ github.run_number }}
+          name: Rooyesh 3.10.0 — Debug build ${{ github.run_number }}
           body: |
             نسخهٔ آزمایشی debug فقط برای تست است و شناسهٔ جداگانه دارد.
             این فایل جایگزین نصب اصلی قبلی نمی‌شود. برای انتشار نسخهٔ اصلی، کلید امضای قبلی باید به‌صورت GitHub Actions Secrets تنظیم شود.
-          files: dist/Rooyesh_3.9.1_MLKit_Debug.apk
+          files: dist/Rooyesh_3.10.0_MLKit_Debug.apk
           prerelease: true
           make_latest: false
