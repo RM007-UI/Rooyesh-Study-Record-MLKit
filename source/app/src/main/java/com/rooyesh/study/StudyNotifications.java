@@ -88,7 +88,18 @@ public final class StudyNotifications {
     }
 
     private static String todayLabel() {
-        return new SimpleDateFormat("EEEE، d MMMM", new Locale("fa", "IR")).format(new Date());
+        return new SimpleDateFormat("EEEE، d MMMM yyyy", new Locale("fa", "IR")).format(new Date());
+    }
+
+    private static String todaySolarLabel() {
+        Date now = new Date();
+        android.icu.util.PersianCalendar persian = new android.icu.util.PersianCalendar(new Locale("fa", "IR"));
+        persian.setTime(now);
+        android.icu.text.SimpleDateFormat format =
+                new android.icu.text.SimpleDateFormat("d MMMM yyyy", new Locale("fa", "IR"));
+        format.setCalendar(persian);
+        format.setTimeZone(android.icu.util.TimeZone.getDefault());
+        return format.format(now);
     }
 
     private static String number(int value) {
@@ -119,7 +130,7 @@ public final class StudyNotifications {
         if (manager == null) return;
         int safeGoal = Math.max(1, Math.min(1440, goal));
         int safeMinutes = Math.max(0, Math.min(1440 * 30, minutes));
-        String title = "رویش | " + todayLabel();
+        String title = "رویش | " + todayLabel() + " · " + todaySolarLabel();
         String content = "مطالعهٔ امروز: " + number(safeMinutes) + " از " + number(safeGoal) + " دقیقه";
         String expanded = safeMinutes >= safeGoal
                 ? content + " — هدف امروز کامل شد 🌱"
