@@ -7,7 +7,6 @@ on:
       - '.github/workflows/build-apk.yml'
       - 'source/**'
       - 'README.md'
-      - 'rooyesh-source.tar.gz'
   workflow_dispatch:
 
 concurrency:
