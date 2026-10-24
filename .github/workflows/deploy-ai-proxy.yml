@@ -2,12 +2,18 @@ name: Deploy Rooyesh DeepSeek proxy
 
 on:
   workflow_dispatch:
+  push:
+    branches: [feature/google-login-deepseek]
+    paths:
+      - 'ai-proxy/**'
+      - '.github/workflows/deploy-ai-proxy.yml'
 
 permissions:
   contents: read
 
 jobs:
   deploy:
+    if: ${{ vars.ENABLE_AI_PROXY_DEPLOY == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
