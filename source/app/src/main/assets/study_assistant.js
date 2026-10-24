@@ -76,6 +76,7 @@ const tools = [
   { type: 'function', function: { name: 'get_flashcards', description: 'Read local flashcards, optionally searching question, answer or subject. Use to help quiz the student or improve cards.', parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', description: '1 to 20; default 10.' } } } } },
   { type: 'function', function: { name: 'get_mood_summary', description: 'Read only the student’s saved mood check-ins, if any. Use only when they specifically ask to reflect on their mood log or ask what is saved there. Do not diagnose.', parameters: { type: 'object', properties: { range_days: { type: 'integer', description: '1 to 90 recent days; default 14.' } } } } },
   { type: 'function', function: { name: 'navigate_to_section', description: 'Open an existing section of Rooyesh on the user’s device. This is a navigation action, not a data modification.', parameters: { type: 'object', properties: { section: { type: 'string', enum: ['home', 'records', 'notes', 'planner', 'calendar', 'translator', 'learning', 'settings'] } }, required: ['section'] } } },
+  { type: 'function', function: { name: 'open_study_tool', description: 'Open a specific built-in tool panel: translator, Arabic grammar lessons/practice, or the periodic table. This is navigation only.', parameters: { type: 'object', properties: { tool: { type: 'string', enum: ['translate', 'arabic', 'periodic'] } }, required: ['tool'] } } },
   { type: 'function', function: { name: 'propose_app_action', description: 'Propose a local change. The app will show the exact change and wait for the student to tap Confirm; you must not claim success until the app reports execution. Supported actions: add_study_record, create_note, create_flashcard, set_daily_goal, create_study_plan.', parameters: { type: 'object', properties: {
     action: { type: 'string', enum: ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan'] },
     subject: { type: 'string' }, minutes: { type: 'integer' }, date: { type: 'string', description: 'Date in YYYY-MM-DD, if relevant.' }, note: { type: 'string' },
@@ -205,6 +206,16 @@ function executeReadTool(name, args) {
     const bridge = getBridge();
     return bridge ? bridge.navigateTo(args.section) : { ok: false, message: 'App bridge is not ready.' };
   }
+  if (name === 'open_study_tool') {
+    const bridge = getBridge();
+    if (!bridge) return { ok: false, message: 'App bridge is not ready.' };
+    const nav = bridge.navigateTo('translator');
+    if (!nav || nav.ok === false) return nav;
+    const button = document.querySelector('[data-study-tool="' + String(args.tool || '') + '"]');
+    if (!button) return { ok: false, message: 'Tool panel is unavailable.' };
+    button.click();
+    return { ok: true, tool: args.tool };
+  }
   if (name === 'propose_app_action') return proposeAction(args);
   return { error: 'Unknown tool.' };
 }
@@ -297,7 +308,7 @@ function ensureUI() {
     const hero = home.querySelector('.hero');
     if (learning && learning.parentNode) learning.parentNode.insertBefore(card, learning.nextSibling);
     else if (hero && hero.parentNode) hero.parentNode.insertBefore(card, hero.nextSibling);
-    card.addEventListener('click', function () { if (event && event.target && event.target.closest('[data-ra-open]')) openPage(); });
+    card.addEventListener('click', function (event) { if (event.target && event.target.closest('[data-ra-open]')) openPage(); });
   }
   if (!$('assistantPage')) {
     const page = document.createElement('div');
@@ -502,7 +513,6 @@ function handleApproval(actionId, approve) {
     action.status = 'success';
     action.message = tr('تغییر با تأیید تو انجام شد.', 'Applied with your confirmation.');
     renderConversation();
-    history.push({ role: 'system', content: tr('کاربر تغییر پیشنهادی را تأیید کرد و برنامه گزارش داد که اجرا شد: ', 'The user approved the proposed action and the app reported success: ') + action.description });
   } catch (error) {
     action.status = 'error';
     action.message = String(error && error.message || error);
