@@ -250,7 +250,7 @@ function renderReviewView(list) {
     return html;
   }
   const dueCount = list.filter(isDue).length;
-  html += '<div class="rl-empty">' + esc(dueCount ? tr('برای شروع آماده‌ای. کارت‌های سررسید را مرور کن؛ اگر خواستی می‌توانی همه کارت‌ها را هم تمرین کنی.', 'Ready when you are. Review due cards, or practise the whole deck.')) : tr('فعلاً کارتی برای مرور زمان‌بندی نشده؛ می‌توانی برای تمرین، همه کارت‌ها را مرور کنی.', 'Nothing is due yet. You can still practise all cards.')) + '</div>';
+  html += '<div class="rl-empty">' + esc(dueCount ? tr('برای شروع آماده‌ای. کارت‌های سررسید را مرور کن؛ اگر خواستی می‌توانی همه کارت‌ها را هم تمرین کنی.', 'Ready when you are. Review due cards, or practise the whole deck.') : tr('فعلاً کارتی برای مرور زمان‌بندی نشده؛ می‌توانی برای تمرین، همه کارت‌ها را مرور کنی.', 'Nothing is due yet. You can still practise all cards.')) + '</div>';
   html += '<div class="rl-demo-actions"><button class="btn btn-primary" type="button" data-rl-start="due" ' + (list.length ? '' : 'disabled') + '>' + esc(tr('شروع مرور سررسیدها', 'Review due cards')) + ' (' + fmtNumber(dueCount) + ')</button><button class="btn btn-soft" type="button" data-rl-start="all" ' + (list.length ? '' : 'disabled') + '>' + esc(tr('مرور همه کارت‌ها', 'Review all cards')) + '</button></div>';
   return html;
 }
