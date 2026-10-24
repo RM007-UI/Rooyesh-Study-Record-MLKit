@@ -71,6 +71,36 @@ jobs:
           cp source/build.gradle build.gradle
           cp source/settings.gradle settings.gradle
           cp source/gradle.properties gradle.properties
+      - name: Inject configured OAuth and DeepSeek endpoint
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          DEEPSEEK_PROXY_URL: ${{ vars.DEEPSEEK_PROXY_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          path = Path("app/src/main/res/values/ai_config.xml")
+          tree = ET.parse(path)
+          root = tree.getroot()
+          values = {
+              "rooyesh_google_web_client_id": os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip(),
+              "rooyesh_deepseek_proxy_url": os.environ.get("DEEPSEEK_PROXY_URL", "").strip(),
+          }
+          for name, value in values.items():
+              if value:
+                  node = root.find("./string[@name='" + name + "']")
+                  if node is None:
+                      raise SystemExit("Missing Android string resource: " + name)
+                  node.text = value
+          ET.indent(tree, space="    ")
+          tree.write(path, encoding="utf-8", xml_declaration=True)
+          print("OAuth client ID injected:", bool(values["rooyesh_google_web_client_id"]))
+          print("DeepSeek proxy URL injected:", bool(values["rooyesh_deepseek_proxy_url"]))
+          PY
       - name: Build installable debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
       - name: Upload interview-demo APK artifact
