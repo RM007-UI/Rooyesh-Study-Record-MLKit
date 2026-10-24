@@ -64,6 +64,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf app tools
           cp -a source/app app
           cp source/build.gradle build.gradle
           cp source/settings.gradle settings.gradle
