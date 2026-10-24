@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replace with the OAuth 2.0 Web client ID from Google Cloud Console. -->
+    <string name="rooyesh_google_web_client_id" translatable="false">REPLACE_WITH_GOOGLE_WEB_CLIENT_ID</string>
+    <!-- Replace with the deployed Cloudflare Worker URL ending in /v1/chat/completions. -->
+    <string name="rooyesh_deepseek_proxy_url" translatable="false"></string>
+</resources>
