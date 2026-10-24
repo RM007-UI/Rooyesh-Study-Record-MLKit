@@ -356,6 +356,28 @@ function handleSubmit(event) {
   renderPage();
 }
 
+window.RooyeshLearningBridge = {
+  getCards: function () {
+    return cards.map(function (c) {
+      return { id: c.id, subject: c.subject, question: c.question, answer: c.answer, dueAt: c.dueAt, intervalDays: c.intervalDays, reviews: c.reviews };
+    });
+  },
+  addCard: function (input) {
+    if (demoMode) return { ok: false, message: 'Exit experimental mode before editing real cards.' };
+    if (!input || !String(input.subject || '').trim() || !String(input.question || '').trim() || !String(input.answer || '').trim()) return { ok: false, message: 'Subject, question, and answer are required.' };
+    cards.unshift({
+      id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8),
+      subject: String(input.subject).trim().slice(0, 50),
+      question: String(input.question).trim().slice(0, 500),
+      answer: String(input.answer).trim().slice(0, 3000),
+      createdAt: Date.now(), dueAt: 0, intervalDays: 0, reviews: 0, lastReviewedAt: 0
+    });
+    persistCards();
+    if ($('rlRoot')) renderPage();
+    return { ok: true, message: 'Flashcard created.' };
+  }
+};
+
 function init() {
   if (!ensureUI()) return;
   const root = $('rlRoot');
