@@ -184,7 +184,7 @@ function renderPage() {
   let html = '';
   html += '<div class="rl-head"><div><h2>' + esc(tr('آزمایشگاه یادگیری', 'Learning lab')) + '</h2><p>' + esc(tr('مرور فعال و فاصله‌دار؛ در کنار ثبت زمان مطالعه.', 'Active recall and spaced review alongside study tracking.')) + '</p></div>';
   html += '<button class="btn btn-quiet rl-back" type="button" data-rl-close aria-label="' + esc(tr('بازگشت به خانه', 'Back home')) + '">← ' + esc(tr('خانه', 'Home')) + '</button></div>';
-  html += '<div class="rl-banner"><strong>' + esc(modeLabel) + '</strong><p>' + esc(demoMode ? tr('این بخش فقط دادهٔ آزمایشی دارد؛ کارت‌ها و پیشرفت واقعی تو تغییر نمی‌کنند.', 'This section uses sample data only; your real cards and progress remain unchanged.') : tr('کارت‌ها فقط روی همین گوشی ذخیره می‌شوند. برای مصاحبه می‌توانی حالت نمایشی را روشن کنی.', 'Cards stay on this device. Use demo mode for the interview presentation.')) + '</p></div>';
+  html += '<div class="rl-banner"><strong>' + esc(modeLabel) + '</strong><p>' + esc(demoMode ? tr('این بخش فقط دادهٔ آزمایشی دارد؛ کارت‌ها و پیشرفت واقعی تو تغییر نمی‌کنند.', 'This section uses sample data only; your real cards and progress remain unchanged.') : tr('کارت‌ها فقط روی همین گوشی ذخیره می‌شوند. برای دیدن نمونه‌ها می‌توانی حالت آزمایشی را روشن کنی.', 'Cards stay on this device. Turn on experimental mode to view sample cards.')) + '</p></div>';
   if (demoMode) {
     html += '<div class="rl-demo-actions"><button class="btn btn-primary" type="button" data-rl-exit-demo>' + esc(tr('خروج از نمایش', 'Exit demo')) + '</button><button class="btn btn-soft" type="button" data-rl-demo-review>' + esc(tr('اجرای مرور نمونه', 'Try sample review')) + '</button></div>';
   } else {
