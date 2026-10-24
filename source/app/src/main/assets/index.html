@@ -493,7 +493,8 @@ window.RooyeshAssistantBridge = {
       records: records.slice(-120).map(function (r) { return { id: r.id, subject: r.subject, minutes: r.minutes, date: r.date, note: r.note || '', source: r.source || 'manual' }; }),
       notes: notes.slice(-60).map(function (n) { return { id: n.id, title: n.title, date: n.date, body: n.body, updated: n.updated }; }),
       studyPlan: studyPlan ? JSON.parse(JSON.stringify(studyPlan)) : null,
-      preferences: { theme: themeMode, blur: blurMode, translatorMode: translatorMode, translatorDirection: translatorDirection }
+      preferences: { theme: themeMode, blur: blurMode, translatorMode: translatorMode, translatorDirection: translatorDirection },
+      timer: { running: running === true, totalSeconds: Math.max(0, Number(totalSeconds) || 0), remainingSeconds: Math.max(0, Number(remainingNow()) || 0), elapsedSeconds: Math.max(0, Number(elapsedNow()) || 0), subject: String($('subject').value || '').slice(0, 70) }
     };
   },
   addStudyRecord: function (data) {
@@ -560,6 +561,34 @@ window.RooyeshAssistantBridge = {
     renderPlanner();
     notify(tr('برنامه درسی با موفقیت ساخته شد.','Study plan created.'));
     return { ok: true, title: studyPlan.title, days: dayCount, partsPerDay: partsCount };
+  },
+  setTimerDuration: function (minutes) {
+    const value = Number(minutes);
+    if (!Number.isInteger(value) || value < 1 || value > 1440) return { ok: false, message: 'Timer duration must be 1–1440 minutes.' };
+    if (running) return { ok: false, message: 'Pause or cancel the running timer first.' };
+    $('timerDuration').value = String(value);
+    totalSeconds = value * 60;
+    remaining = totalSeconds;
+    elapsed = 0;
+    completed = false;
+    paintClock();
+    persistTimerRecovery(true);
+    return { ok: true, timerMinutes: value };
+  },
+  startTimer: function () {
+    if (running) return { ok: true, message: 'Timer is already running.' };
+    startTimer();
+    return { ok: true, message: 'Timer started.', timer: { running: running === true, remainingSeconds: remainingNow() } };
+  },
+  pauseTimer: function () {
+    if (!running) return { ok: true, message: 'Timer is not running.' };
+    pauseTimer();
+    return { ok: true, message: 'Timer paused.', timer: { running: running === true, remainingSeconds: remainingNow() } };
+  },
+  cancelTimer: function () {
+    if (typeof cancelTimer !== 'function') return { ok: false, message: 'Timer cancel action is unavailable.' };
+    cancelTimer();
+    return { ok: true, message: 'Timer cancelled.' };
   },
   navigateTo: function (section) {
     const allowed = { home: 'homePage', records: 'recordsPage', notes: 'notesPage', planner: 'plannerPage', calendar: 'calendarPage', translator: 'translatorPage', settings: 'settingsPage', learning: 'learningPage' };
