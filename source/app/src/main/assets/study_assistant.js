@@ -790,7 +790,7 @@ function handleSubmit(event) {
   const input = $('raInput');
   const value = String(input.value || '').trim();
   if (!value) return;
-  if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') {
+  if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') {
     renderSetup();
     setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ متن پیام باقی مانده و هنوز ارسال نشده است.', 'Sign in with Google and accept the privacy notice first; your message remains here and has not been sent.'), false);
     return;
