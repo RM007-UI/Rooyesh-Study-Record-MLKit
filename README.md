@@ -34,8 +34,16 @@
 - حالت آزمایشی با داده‌های نمونه که از سوابق واقعی و کارت‌های شخصی جداست.
 - قابلیت‌های این شاخه هنوز باید روی گوشی آزمایش شوند؛ تا پایان بررسی، APK نسخهٔ اصلی جایگزین نمی‌شود.
 
-## Rooyesh AI (experimental)
+## Rooyesh AI — Google sign-in + DeepSeek (experimental)
 
-The app now has an optional cloud study assistant using OpenRouter's free-model router (`openrouter/free`). It requires the user to create and enter their own API key. No shared key is bundled in the APK or repository. Free model capacity is rate-limited and may be unavailable at times.
+The experimental assistant is being migrated from a student-entered OpenRouter key to native Google sign-in and a server-side DeepSeek proxy.
 
-The assistant can read selected study records, goals, notes, plans, flashcards and mood check-ins through app tools; open the translator, Arabic lessons or periodic table; and propose local changes. Every write operation requires an explicit confirmation inside the app. Recent conversation history (up to 24 messages) and up to 40 user-managed memory notes can be saved locally between app launches. Memory can be toggled off; saved notes can be listed, edited and deleted, and the chat history can be cleared separately. Memory items requested by the AI are only saved after explicit user approval. When enabled, recent conversation context and relevant saved memory may be sent with a cloud request. Study data and messages selected for a response are sent to OpenRouter and its routed model provider, so the user must acknowledge the privacy notice before sending anything. The key and memory are stored in the app's local WebView storage, not encrypted by this JavaScript module. Do not use a valuable/shared key and do not store sensitive personal data or secrets.
+- Students sign in with Google in the Android app; the Google ID token is held in memory and sent to the proxy for verification.
+- The DeepSeek API key is intended to be stored only as a Cloudflare Worker secret, never in the APK or local WebView storage.
+- The assistant uses the `deepseek-flash` model with tool calling enabled and thinking disabled for compatibility with tool calls.
+- The Worker source and setup instructions are in [ai-proxy/README.md](ai-proxy/README.md).
+- Android configuration placeholders are in `source/app/src/main/res/values/ai_config.xml`. Until a real Google Web OAuth client ID and deployed Worker URL are configured there, cloud AI will not connect.
+- The owner must configure a DeepSeek API key and spending limits. Google login does not itself grant free DeepSeek usage; requests may incur charges and availability depends on the user's network and DeepSeek's service.
+- Recent conversation history (up to 24 messages) and up to 40 user-managed memory notes are stored locally. When memory is enabled, relevant memory and recent chat context may be sent with a cloud request. The user must acknowledge the privacy notice. Local WebView storage is not separately encrypted.
+
+This is not ready for general student distribution until OAuth, the Worker secret, the proxy URL, usage limits, and the built APK have all been configured and tested on target networks.
