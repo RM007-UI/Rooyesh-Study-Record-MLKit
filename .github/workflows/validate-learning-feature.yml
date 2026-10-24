@@ -2,17 +2,20 @@ name: Validate learning feature
 
 on:
   push:
-    branches:
-      - feature/flashcards-interview-demo
+    branches: [feature/google-login-deepseek]
     paths:
-      - 'source/app/src/main/assets/**'
+      - 'source/app/**'
       - 'source/tools/check_html_js.py'
+      - 'ai-proxy/**'
+      - 'README.md'
       - '.github/workflows/validate-learning-feature.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feature/flashcards-interview-demo]
     paths:
-      - 'source/app/src/main/assets/**'
+      - 'source/app/**'
       - 'source/tools/check_html_js.py'
+      - 'ai-proxy/**'
+      - 'README.md'
       - '.github/workflows/validate-learning-feature.yml'
 
 permissions:
@@ -48,7 +51,10 @@ jobs:
           grep -q 'rooyeshFlashcardsV1' source/app/src/main/assets/study_learning.js
           grep -q 'data-rl-enter-demo' source/app/src/main/assets/study_learning.js
           grep -q 'data-rl-grade' source/app/src/main/assets/study_learning.js
-          grep -q 'openrouter/free' source/app/src/main/assets/study_assistant.js
+          grep -q 'deepseek-flash' source/app/src/main/assets/study_assistant.js
+          grep -q 'beginGoogleSignIn' source/app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q 'rooyesh_google_web_client_id' source/app/src/main/res/values/ai_config.xml
+          node --check ai-proxy/src/index.js
           grep -q 'RooyeshAssistantBridge' source/app/src/main/assets/index.html
           grep -q 'data-ra-approve' source/app/src/main/assets/study_assistant.js
       - name: Set up Java 17
@@ -73,8 +79,45 @@ jobs:
           cp source/build.gradle build.gradle
           cp source/settings.gradle settings.gradle
           cp source/gradle.properties gradle.properties
+      - name: Inject configured OAuth and DeepSeek endpoint
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          DEEPSEEK_PROXY_URL: ${{ vars.DEEPSEEK_PROXY_URL || 'https://rooyesh-deepseek-proxy.reza86mirzaei.workers.dev' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          path = Path("app/src/main/res/values/ai_config.xml")
+          tree = ET.parse(path)
+          root = tree.getroot()
+          proxy_url = os.environ.get("DEEPSEEK_PROXY_URL", "").strip().rstrip("/")
+          # Accept either the Worker base URL or the full OpenAI-compatible endpoint.
+          # The Worker returns HTTP 404 at its root; chat requests must use this path.
+          if proxy_url and not proxy_url.endswith("/v1/chat/completions"):
+              proxy_url += "/v1/chat/completions"
+          values = {
+              "rooyesh_google_web_client_id": os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip(),
+              "rooyesh_deepseek_proxy_url": proxy_url,
+          }
+          for name, value in values.items():
+              if value:
+                  node = root.find("./string[@name='" + name + "']")
+                  if node is None:
+                      raise SystemExit("Missing Android string resource: " + name)
+                  node.text = value
+          ET.indent(tree, space="    ")
+          tree.write(path, encoding="utf-8", xml_declaration=True)
+          print("OAuth client ID injected:", bool(values["rooyesh_google_web_client_id"]))
+          print("DeepSeek proxy URL injected:", bool(values["rooyesh_deepseek_proxy_url"]))
+          PY
       - name: Build installable debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Print APK signer SHA-1
+        run: $ANDROID_HOME/build-tools/35.0.0/apksigner verify --print-certs app/build/outputs/apk/debug/app-debug.apk
       - name: Upload interview-demo APK artifact
         uses: actions/upload-artifact@v4
         with:

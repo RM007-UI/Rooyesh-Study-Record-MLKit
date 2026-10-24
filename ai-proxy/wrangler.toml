@@ -1,0 +1,14 @@
+name = "rooyesh-deepseek-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-24"
+
+[vars]
+# Set this to the Web OAuth client ID configured for the Android app.
+# The native Android WebView uses Origin: null for bundled file:// assets.
+APP_ORIGIN = "null"
+
+# Per Google account: short burst limiter. Also set spending/usage limits at DeepSeek.
+[[ratelimits]]
+name = "AI_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 12, period = 60 }

@@ -20,6 +20,11 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.common.model.RemoteModelManager;
@@ -44,15 +49,27 @@ import java.util.Set;
  * Application ID remains com.rooyesh.study.app; Activity class remains com.rooyesh.study.MainActivity.
  */
 public final class MainActivity extends Activity {
+    private static final int REQUEST_GOOGLE_SIGN_IN = 557;
     private static final int REQUEST_WRITE_STORAGE = 555;
     private static final int REQUEST_POST_NOTIFICATIONS = 556;
     private static final String TIMER_NOTIFICATION_CHANNEL = "rooyesh-study-timer";
     private WebView webView;
+    private GoogleSignInClient googleSignInClient;
+    private String googleIdToken = "";
+    private String googleEmail = "";
     private final Map<String, Translator> translators = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        String webClientId = getString(R.string.rooyesh_google_web_client_id);
+        if (!webClientId.trim().isEmpty() && !webClientId.startsWith("REPLACE_")) {
+            GoogleSignInOptions signInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken(webClientId.trim())
+                    .requestEmail()
+                    .build();
+            googleSignInClient = GoogleSignIn.getClient(this, signInOptions);
+        }
         StudyNotifications.ensureChannels(this);
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
@@ -79,6 +96,36 @@ public final class MainActivity extends Activity {
         } else {
             StudyNotifications.refreshCalendarFromPrefs(this);
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_GOOGLE_SIGN_IN) return;
+        if (googleSignInClient == null) {
+            sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
+            return;
+        }
+        try {
+            GoogleSignInAccount account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class);
+            googleIdToken = account != null && account.getIdToken() != null ? account.getIdToken() : "";
+            googleEmail = account != null && account.getEmail() != null ? account.getEmail() : "";
+            if (googleIdToken.isEmpty()) sendGoogleAuthResult("", "", "Google did not return an ID token. Check the Web OAuth client ID.");
+            else sendGoogleAuthResult(googleIdToken, googleEmail, "");
+        } catch (ApiException error) {
+            sendGoogleAuthResult("", "", "Google sign-in failed (code " + error.getStatusCode() + "). Check internet and OAuth setup.");
+        }
+    }
+
+    private void sendGoogleAuthResult(String token, String email, String error) {
+        final String tokenJson = JSONObject.quote(token == null ? "" : token);
+        final String emailJson = JSONObject.quote(email == null ? "" : email);
+        final String errorJson = JSONObject.quote(error == null ? "" : error);
+        runOnUiThread(() -> {
+            if (webView == null) return;
+            webView.evaluateJavascript("if(window.RooyeshGoogleAuthResult){window.RooyeshGoogleAuthResult("
+                    + tokenJson + "," + emailJson + "," + errorJson + ");}", null);
+        });
     }
 
     @Override
@@ -276,6 +323,57 @@ public final class MainActivity extends Activity {
 
     public final class RooyeshNative {
         RooyeshNative() { /* Keep a native bridge instance per WebView. */ }
+
+        /** Returns the configured HTTPS DeepSeek proxy URL; no provider key is stored in the APK. */
+        @JavascriptInterface
+        public String getAiProxyUrl() {
+            return getString(R.string.rooyesh_deepseek_proxy_url);
+        }
+
+        /** Opens the native Google account picker. */
+        @JavascriptInterface
+        public void beginGoogleSignIn() {
+            runOnUiThread(() -> {
+                if (googleSignInClient == null) {
+                    MainActivity.this.sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
+                    return;
+                }
+                try {
+                    startActivityForResult(googleSignInClient.getSignInIntent(), REQUEST_GOOGLE_SIGN_IN);
+                } catch (Exception error) {
+                    MainActivity.this.sendGoogleAuthResult("", "", "Could not open Google sign-in.");
+                }
+            });
+        }
+
+        /** Restores a previously selected Google account without showing a picker. */
+        @JavascriptInterface
+        public void restoreGoogleSignIn() {
+            if (googleSignInClient == null) {
+                MainActivity.this.sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
+                return;
+            }
+            googleSignInClient.silentSignIn().addOnCompleteListener(MainActivity.this, task -> {
+                if (task.isSuccessful() && task.getResult() != null) {
+                    GoogleSignInAccount account = task.getResult();
+                    googleIdToken = account.getIdToken() == null ? "" : account.getIdToken();
+                    googleEmail = account.getEmail() == null ? "" : account.getEmail();
+                    MainActivity.this.sendGoogleAuthResult(googleIdToken, googleEmail, "");
+                } else {
+                    googleIdToken = "";
+                    googleEmail = "";
+                    MainActivity.this.sendGoogleAuthResult("", "", "");
+                }
+            });
+        }
+
+        /** Signs out locally from the selected Google account. */
+        @JavascriptInterface
+        public void signOutGoogle() {
+            googleIdToken = "";
+            googleEmail = "";
+            if (googleSignInClient != null) googleSignInClient.signOut();
+        }
 
         /** Requests Android 13+ notification permission after an explicit tap in the UI. */
         @JavascriptInterface
