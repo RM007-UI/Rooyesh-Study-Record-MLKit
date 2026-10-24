@@ -530,22 +530,7 @@ function openPage() {
   document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('hidden', p.id !== 'assistantPage'); });
   document.querySelectorAll('.nav-button').forEach(function (b) { b.classList.remove('active'); });
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  window.RooyeshGoogleAuthResult = function (token, email, error) {
-    googleIdToken = String(token || ''); googleUserEmail = String(email || '');
-    renderSetup();
-    if (error) setStatus(String(error), true);
-    else if (googleIdToken) setStatus(proxyEndpoint ? tr('ورود انجام شد؛ حالا می‌توانی سؤال بپرسی.', 'Signed in; you can ask a question now.') : tr('ورود گوگل آماده است، اما سرویس هوش مصنوعی هنوز پیکربندی نشده.', 'Google sign-in works, but the AI service is not configured yet.'), !proxyEndpoint);
-  };
-  try {
-    if (window.RooyeshNative && window.RooyeshNative.getAiProxyUrl) proxyEndpoint = String(window.RooyeshNative.getAiProxyUrl() || '').trim();
-    if (window.RooyeshNative && window.RooyeshNative.restoreGoogleSignIn) window.RooyeshNative.restoreGoogleSignIn();
-  } catch (_) {}
-  renderSetup();
-  renderConversation();
-  renderMemoryControls();
-  renderMemoryPanel();
-  $('raInput').focus();
-}
+  
 function goHome() {
   const home = document.querySelector('.nav-button[data-page="homePage"]');
   if (home) home.click();
@@ -815,6 +800,22 @@ function init() {
   $('raInput').addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); $('raComposer').requestSubmit ? $('raComposer').requestSubmit() : $('raSend').click(); }
   });
+window.RooyeshGoogleAuthResult = function (token, email, error) {
+    googleIdToken = String(token || ''); googleUserEmail = String(email || '');
+    renderSetup();
+    if (error) setStatus(String(error), true);
+    else if (googleIdToken) setStatus(proxyEndpoint ? tr('ورود انجام شد؛ حالا می‌توانی سؤال بپرسی.', 'Signed in; you can ask a question now.') : tr('ورود گوگل آماده است، اما سرویس هوش مصنوعی هنوز پیکربندی نشده.', 'Google sign-in works, but the AI service is not configured yet.'), !proxyEndpoint);
+  };
+  try {
+    if (window.RooyeshNative && window.RooyeshNative.getAiProxyUrl) proxyEndpoint = String(window.RooyeshNative.getAiProxyUrl() || '').trim();
+    if (window.RooyeshNative && window.RooyeshNative.restoreGoogleSignIn) window.RooyeshNative.restoreGoogleSignIn();
+  } catch (_) {}
+  renderSetup();
+  renderConversation();
+  renderMemoryControls();
+  renderMemoryPanel();
+  $('raInput').focus();
+}
   renderSetup();
   renderConversation();
   renderMemoryControls();
