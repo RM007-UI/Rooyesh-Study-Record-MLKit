@@ -124,7 +124,7 @@ function ensureUI() {
       '<h3>' + esc(tr('آزمایشگاه یادگیری', 'Learning lab')) + '</h3>' +
       '<p>' + esc(tr('با فلش‌کارت مرور کن، فاصله مرورها را بسپار به رویش و رشدت را ببین.', 'Review with flashcards, schedule spaced reviews and see your progress.')) + '</p></div>' +
       '<div class="rl-shortcut-actions"><button class="btn btn-primary" type="button" data-rl-open>' + esc(tr('باز کردن', 'Open')) + ' ↗</button>' +
-      '<button class="btn btn-soft" type="button" data-rl-demo>' + esc(tr('نمایش مصاحبه', 'Interview demo')) + '</button></div>';
+      '<button class="btn btn-soft" type="button" data-rl-demo>' + esc(tr('حالت آزمایشی', 'Experimental mode')) + '</button></div>';
     const hero = home.querySelector('.hero');
     if (hero && hero.parentNode) hero.parentNode.insertBefore(shortcut, hero.nextSibling);
     shortcut.addEventListener('click', function (event) {
@@ -180,15 +180,15 @@ function renderPage() {
   const list = activeCards();
   const dueCount = list.filter(isDue).length;
   const report = demoMode ? demoReport() : actualReport();
-  const modeLabel = demoMode ? tr('حالت نمایشی • داده‌های ساختگی', 'Demo mode • sample data') : tr('حالت شخصی • داده‌های همین گوشی', 'Personal mode • on-device data');
+  const modeLabel = demoMode ? tr('حالت آزمایشی • داده‌های ساختگی', 'Experimental mode • sample data') : tr('حالت شخصی • داده‌های همین گوشی', 'Personal mode • on-device data');
   let html = '';
   html += '<div class="rl-head"><div><h2>' + esc(tr('آزمایشگاه یادگیری', 'Learning lab')) + '</h2><p>' + esc(tr('مرور فعال و فاصله‌دار؛ در کنار ثبت زمان مطالعه.', 'Active recall and spaced review alongside study tracking.')) + '</p></div>';
   html += '<button class="btn btn-quiet rl-back" type="button" data-rl-close aria-label="' + esc(tr('بازگشت به خانه', 'Back home')) + '">← ' + esc(tr('خانه', 'Home')) + '</button></div>';
-  html += '<div class="rl-banner"><strong>' + esc(modeLabel) + '</strong><p>' + esc(demoMode ? tr('اطلاعات این بخش کاملاً نمونه است؛ کارت‌ها و پیشرفت واقعی تو تغییر نمی‌کنند.', 'Everything here is sample data; your real cards and progress are untouched.') : tr('کارت‌ها فقط روی همین گوشی ذخیره می‌شوند. برای مصاحبه می‌توانی حالت نمایشی را روشن کنی.', 'Cards stay on this device. Use demo mode for the interview presentation.')) + '</p></div>';
+  html += '<div class="rl-banner"><strong>' + esc(modeLabel) + '</strong><p>' + esc(demoMode ? tr('این بخش فقط دادهٔ آزمایشی دارد؛ کارت‌ها و پیشرفت واقعی تو تغییر نمی‌کنند.', 'This section uses sample data only; your real cards and progress remain unchanged.') : tr('کارت‌ها فقط روی همین گوشی ذخیره می‌شوند. برای مصاحبه می‌توانی حالت نمایشی را روشن کنی.', 'Cards stay on this device. Use demo mode for the interview presentation.')) + '</p></div>';
   if (demoMode) {
     html += '<div class="rl-demo-actions"><button class="btn btn-primary" type="button" data-rl-exit-demo>' + esc(tr('خروج از نمایش', 'Exit demo')) + '</button><button class="btn btn-soft" type="button" data-rl-demo-review>' + esc(tr('اجرای مرور نمونه', 'Try sample review')) + '</button></div>';
   } else {
-    html += '<div class="rl-demo-actions"><button class="btn btn-soft" type="button" data-rl-enter-demo>✦ ' + esc(tr('اجرای حالت نمایش مصاحبه', 'Launch interview demo')) + '</button></div>';
+    html += '<div class="rl-demo-actions"><button class="btn btn-soft" type="button" data-rl-enter-demo>✦ ' + esc(tr('اجرای حالت آزمایشی', 'Enter experimental mode')) + '</button></div>';
   }
   html += '<div class="rl-stats"><div class="rl-stat"><span>' + esc(tr('کل کارت‌ها', 'Total cards')) + '</span><strong>' + fmtNumber(list.length) + '</strong></div>';
   html += '<div class="rl-stat"><span>' + esc(tr('آماده مرور', 'Due to review')) + '</span><strong>' + fmtNumber(dueCount) + '</strong></div>';
@@ -210,7 +210,7 @@ function renderCardsView(list) {
     html += '<div class="field"><label for="rlAnswer">' + esc(tr('پشت کارت: پاسخ', 'Back: answer')) + '</label><textarea class="input" id="rlAnswer" name="answer" maxlength="3000" required placeholder="' + esc(tr('پاسخ را با زبان ساده بنویس…', 'Write the answer in your own words…')) + '"></textarea></div>';
     html += '<button class="btn btn-primary btn-wide" type="submit">＋ ' + esc(tr('ذخیره کارت', 'Save card')) + '</button></form>';
   } else {
-    html += '<div class="rl-subhead"><h3>' + esc(tr('نمونه کارت‌های درسی', 'Sample study cards')) + '</h3><small>' + esc(tr('فقط برای نمایش', 'Demo only')) + '</small></div>';
+    html += '<div class="rl-subhead"><h3>' + esc(tr('کارت‌های نمونه', 'Sample study cards')) + '</h3><small>' + esc(tr('حالت آزمایشی', 'Experimental mode')) + '</small></div>';
   }
   html += '<div class="rl-subhead"><h3>' + esc(tr('مجموعه کارت‌ها', 'Your deck')) + '</h3><small>' + fmtNumber(list.length) + ' ' + esc(tr('کارت', 'cards')) + '</small></div>';
   if (!list.length) {
@@ -258,11 +258,11 @@ function renderReviewView(list) {
 function renderReportView(report) {
   const goal = demoMode ? 600 : readGoal();
   const pct = Math.min(100, Math.round(report.minutes / goal * 100));
-  let html = '<div class="rl-subhead"><h3>' + esc(tr('جمع‌بندی هفت روز اخیر', 'Last seven days')) + '</h3><small>' + esc(demoMode ? tr('سناریوی نمونه', 'Sample scenario') : tr('از سوابق همین گوشی', 'From this device’s records')) + '</small></div>';
+  let html = '<div class="rl-subhead"><h3>' + esc(tr('جمع‌بندی هفت روز اخیر', 'Last seven days')) + '</h3><small>' + esc(demoMode ? tr('گزارش آزمایشی', 'Experimental report') : tr('از سوابق همین گوشی', 'From this device’s records')) + '</small></div>';
   html += '<div class="rl-stats"><div class="rl-stat"><span>' + esc(tr('زمان مطالعه', 'Study time')) + '</span><strong>' + esc(fmtMinutes(report.minutes)) + '</strong></div><div class="rl-stat"><span>' + esc(tr('جلسه ثبت‌شده', 'Sessions')) + '</span><strong>' + fmtNumber(report.sessions) + '</strong></div><div class="rl-stat"><span>' + esc(tr('روزهای فعال', 'Active days')) + '</span><strong>' + fmtNumber(report.activeDays) + '/7</strong></div></div>';
   html += '<div class="rl-card-item"><div class="rl-card-top"><h4>' + esc(tr('پیشرفت نسبت به هدف هفتگی', 'Weekly goal progress')) + '</h4><strong>' + fmtNumber(pct) + '٪'.replace('٪', isEnglish() ? '%' : '٪') + '</strong></div><div class="rl-report-bar"><span style="width:' + pct + '%"></span></div><p>' + esc(tr('هدف نمونه: ', 'Illustrative goal: ')) + fmtMinutes(goal) + '</p></div>';
   html += '<div class="rl-card-item" style="margin-top:9px"><h4>' + esc(tr('درس پرتکرار', 'Most-studied subject')) + '</h4><p>' + esc(report.topSubject || tr('هنوز داده‌ای برای این بازه ثبت نشده است.', 'No subject data recorded for this period yet.')) + '</p></div>';
-  html += '<p class="rl-note">' + esc(demoMode ? tr('این اعداد ساختگی‌اند و فقط شیوه گزارش‌دهی را نشان می‌دهند؛ آن‌ها نتیجه واقعی هیچ دانش‌آموزی نیستند.', 'These numbers are illustrative only and do not represent a real student.') : tr('این گزارش توصیفی است و به‌تنهایی کیفیت یادگیری یا میزان تسلط را ثابت نمی‌کند. برای سنجش یادگیری، مرور کارت‌ها و تمرین هم مهم‌اند.', 'This is a descriptive report, not proof of mastery. Flashcard reviews and practice help assess learning too.')) + '</p>';
+  html += '<p class="rl-note">' + esc(demoMode ? tr('این اعداد ساختگی‌اند و فقط روش گزارش‌دهی را نشان می‌دهند.', 'These sample numbers only demonstrate the report layout.') : tr('این گزارش توصیفی است و به‌تنهایی کیفیت یادگیری یا میزان تسلط را ثابت نمی‌کند. برای سنجش یادگیری، مرور کارت‌ها و تمرین هم مهم‌اند.', 'This is a descriptive report, not proof of mastery. Flashcard reviews and practice help assess learning too.')) + '</p>';
   return html;
 }
 function readGoal() {
@@ -372,7 +372,7 @@ function init() {
         const copy = shortcut.querySelector('.rl-shortcut-copy');
         const actions = shortcut.querySelector('.rl-shortcut-actions');
         if (copy) copy.innerHTML = '<span class="rl-eyebrow">' + esc(tr('یک قدم فراتر از ثبت ساعت', 'Beyond tracking hours')) + '</span><h3>' + esc(tr('آزمایشگاه یادگیری', 'Learning lab')) + '</h3><p>' + esc(tr('با فلش‌کارت مرور کن، فاصله مرورها را بسپار به رویش و رشدت را ببین.', 'Review with flashcards, schedule spaced reviews and see your progress.')) + '</p>';
-        if (actions) actions.innerHTML = '<button class="btn btn-primary" type="button" data-rl-open>' + esc(tr('باز کردن', 'Open')) + ' ↗</button><button class="btn btn-soft" type="button" data-rl-demo>' + esc(tr('نمایش مصاحبه', 'Interview demo')) + '</button>';
+        if (actions) actions.innerHTML = '<button class="btn btn-primary" type="button" data-rl-open>' + esc(tr('باز کردن', 'Open')) + ' ↗</button><button class="btn btn-soft" type="button" data-rl-demo>' + esc(tr('حالت آزمایشی', 'Experimental mode')) + '</button>';
       }
     }
   });
