@@ -335,13 +335,13 @@ public final class MainActivity extends Activity {
         public void beginGoogleSignIn() {
             runOnUiThread(() -> {
                 if (googleSignInClient == null) {
-                    sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
+                    MainActivity.this.sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
                     return;
                 }
                 try {
                     startActivityForResult(googleSignInClient.getSignInIntent(), REQUEST_GOOGLE_SIGN_IN);
                 } catch (Exception error) {
-                    sendGoogleAuthResult("", "", "Could not open Google sign-in.");
+                    MainActivity.this.sendGoogleAuthResult("", "", "Could not open Google sign-in.");
                 }
             });
         }
@@ -350,7 +350,7 @@ public final class MainActivity extends Activity {
         @JavascriptInterface
         public void restoreGoogleSignIn() {
             if (googleSignInClient == null) {
-                sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
+                MainActivity.this.sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
                 return;
             }
             googleSignInClient.silentSignIn().addOnCompleteListener(MainActivity.this, task -> {
@@ -358,11 +358,11 @@ public final class MainActivity extends Activity {
                     GoogleSignInAccount account = task.getResult();
                     googleIdToken = account.getIdToken() == null ? "" : account.getIdToken();
                     googleEmail = account.getEmail() == null ? "" : account.getEmail();
-                    sendGoogleAuthResult(googleIdToken, googleEmail, "");
+                    MainActivity.this.sendGoogleAuthResult(googleIdToken, googleEmail, "");
                 } else {
                     googleIdToken = "";
                     googleEmail = "";
-                    sendGoogleAuthResult("", "", "");
+                    MainActivity.this.sendGoogleAuthResult("", "", "");
                 }
             });
         }
