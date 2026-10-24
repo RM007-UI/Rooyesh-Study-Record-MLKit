@@ -69,6 +69,7 @@ const systemPrompt = [
 
 const tools = [
   { type: 'function', function: { name: 'get_app_overview', description: 'Explain the purpose of Rooyesh and list the app sections and capabilities. Use when the user asks what this app can do or where a feature is.', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'get_timer_status', description: 'Read the current study timer status, remaining time, elapsed time and optional subject currently entered in the timer form.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'get_study_summary', description: 'Read and summarize actual study records for the requested recent period. Includes minutes, sessions, active days, subject totals, daily goal, and plan status.', parameters: { type: 'object', properties: { range_days: { type: 'integer', description: 'Number of recent days, 1 to 90; default 7.' }, subject: { type: 'string', description: 'Optional subject filter.' } } } } },
   { type: 'function', function: { name: 'search_local_content', description: 'Search local study records, notes, planned study tasks and flashcards for matching words. Does not search private mood logs.', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Words to search for.' } }, required: ['query'] } } },
   { type: 'function', function: { name: 'get_notes', description: 'Read local notes, optionally filtered by a search query. Note bodies may contain personal information; return only the most relevant entries.', parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', description: '1 to 10 entries; default 5.' } } } } },
@@ -80,11 +81,11 @@ const tools = [
   { type: 'function', function: { name: 'get_alarm_config', description: 'Read the currently saved daily reminder/alarm settings from the Android app, if the native bridge is available.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'search_arabic_lessons', description: 'Search the actual built-in Arabic lessons, examples, explanations, tips and practice questions. Use this before tutoring on one of the app’s Arabic topics.', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Optional topic or word to search.' } } } } },
   { type: 'function', function: { name: 'search_periodic_table', description: 'Search the 118 built-in periodic-table entries by element name, symbol or atomic number.', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Element name, symbol or atomic number.' } }, required: ['query'] } } },
-  { type: 'function', function: { name: 'propose_app_action', description: 'Propose a local change. The app will show the exact change and wait for the student to tap Confirm; you must not claim success until the app reports execution. Supported actions: add_study_record, create_note, create_flashcard, set_daily_goal, create_study_plan.', parameters: { type: 'object', properties: {
-    action: { type: 'string', enum: ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm'] },
+  { type: 'function', function: { name: 'propose_app_action', description: 'Propose a local change. The app will show the exact change and wait for the student to tap Confirm; you must not claim success until the app reports execution. Supported actions: add_study_record, create_note, create_flashcard, set_daily_goal, create_study_plan, set_alarm, cancel_alarm, set_timer_duration, start_timer, pause_timer, cancel_timer.', parameters: { type: 'object', properties: {
+    action: { type: 'string', enum: ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm', 'set_timer_duration', 'start_timer', 'pause_timer', 'cancel_timer'] },
     subject: { type: 'string' }, minutes: { type: 'integer' }, date: { type: 'string', description: 'Date in YYYY-MM-DD, if relevant.' }, note: { type: 'string' },
     title: { type: 'string' }, body: { type: 'string' }, question: { type: 'string' }, answer: { type: 'string' },
-    daily_goal_minutes: { type: 'integer' }, days: { type: 'integer' }, parts_per_day: { type: 'integer' }, start_date: { type: 'string', description: 'Start date YYYY-MM-DD, if known.' }, tasks: { type: 'array', items: { type: 'string' }, description: 'Optional ordered study tasks to place in the plan.' }, alarm_time: { type: 'string', description: 'Local 24-hour time HH:MM.' }, alarm_repeat_daily: { type: 'boolean' }, alarm_volume_percent: { type: 'integer', description: '35 to 100 percent.' }
+    daily_goal_minutes: { type: 'integer' }, days: { type: 'integer' }, parts_per_day: { type: 'integer' }, start_date: { type: 'string', description: 'Start date YYYY-MM-DD, if known.' }, tasks: { type: 'array', items: { type: 'string' }, description: 'Optional ordered study tasks to place in the plan.' }, alarm_time: { type: 'string', description: 'Local 24-hour time HH:MM.' }, alarm_repeat_daily: { type: 'boolean' }, alarm_volume_percent: { type: 'integer', description: '35 to 100 percent.' }, timer_minutes: { type: 'integer', description: '1 to 1440 minutes.' }
   }, required: ['action'] } } }
 ];
 
@@ -195,6 +196,7 @@ function getMood(args) {
 }
 function executeReadTool(name, args) {
   if (name === 'get_app_overview') return overview();
+  if (name === 'get_timer_status') return { timer: getState().timer || null };
   if (name === 'get_study_summary') return getSummary(args);
   if (name === 'search_local_content') return searchContent(args);
   if (name === 'get_notes') return getNotes(args);
@@ -244,12 +246,16 @@ function describeAction(a) {
   if (a.action === 'create_study_plan') return tr('ساخت برنامه «' + (a.title || 'برنامه درسی') + '» برای ' + a.days + ' روز با ' + a.parts_per_day + ' پارت روزانه', 'Create plan "' + (a.title || 'Study plan') + '" for ' + a.days + ' days, ' + a.parts_per_day + ' parts/day');
   if (a.action === 'set_alarm') return tr('تنظیم زنگ روزانه برای ساعت ' + a.alarm_time, 'Set daily alarm for ' + a.alarm_time);
   if (a.action === 'cancel_alarm') return tr('خاموش کردن زنگ روزانه', 'Turn off the daily alarm');
+  if (a.action === 'set_timer_duration') return tr('تنظیم تایمر مطالعه روی ' + a.timer_minutes + ' دقیقه', 'Set study timer to ' + a.timer_minutes + ' minutes');
+  if (a.action === 'start_timer') return tr('شروع تایمر مطالعه', 'Start the study timer');
+  if (a.action === 'pause_timer') return tr('مکث تایمر مطالعه', 'Pause the study timer');
+  if (a.action === 'cancel_timer') return tr('لغو تایمر مطالعه', 'Cancel the study timer');
   return tr('تغییر پیشنهادی رویش', 'Proposed change in Rooyesh');
 }
 function proposeAction(args) {
   const a = Object.assign({}, args || {});
   const action = String(a.action || '');
-  const allowed = ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm'];
+  const allowed = ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm', 'set_timer_duration', 'start_timer', 'pause_timer', 'cancel_timer'];
   if (allowed.indexOf(action) < 0) return { ok: false, message: 'Unsupported action.' };
   if (action === 'add_study_record') {
     a.subject = String(a.subject || '').trim().slice(0, 100);
@@ -277,6 +283,11 @@ function proposeAction(args) {
     if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(a.alarm_time) || !Number.isInteger(a.alarm_volume_percent) || a.alarm_volume_percent < 35 || a.alarm_volume_percent > 100) return { ok: false, message: 'Alarm needs a valid HH:MM time and 35–100 percent volume.' };
   } else if (action === 'cancel_alarm') {
     a.action = 'cancel_alarm';
+  } else if (action === 'set_timer_duration') {
+    a.timer_minutes = Number(a.timer_minutes);
+    if (!Number.isInteger(a.timer_minutes) || a.timer_minutes < 1 || a.timer_minutes > 1440) return { ok: false, message: 'Timer duration must be 1–1440 whole minutes.' };
+  } else if (['start_timer', 'pause_timer', 'cancel_timer'].includes(action)) {
+    a.action = action;
   } else if (action === 'create_study_plan') {
     a.title = String(a.title || '').trim().slice(0, 100);
     a.days = Number(a.days);
@@ -314,6 +325,10 @@ function runAction(action) {
     window.RooyeshNative.cancelStudyAlarm();
     return { ok: true, message: tr('زنگ خاموش شد.', 'Alarm turned off.') };
   }
+  if (a.action === 'set_timer_duration') return bridge.setTimerDuration(a.timer_minutes);
+  if (a.action === 'start_timer') return bridge.startTimer();
+  if (a.action === 'pause_timer') return bridge.pauseTimer();
+  if (a.action === 'cancel_timer') return bridge.cancelTimer();
   return { ok: false, message: 'Unsupported action.' };
 }
 function actionCard(action) {
