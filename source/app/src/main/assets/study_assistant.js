@@ -777,7 +777,7 @@ function handleClick(event) {
   }
   if (target.hasAttribute('data-ra-prompt')) {
     $('raInput').value = target.getAttribute('data-ra-prompt');
-    if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') { openPage(); setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ پیام هنوز ارسال نشده.', 'Sign in with Google and accept the privacy notice; the message has not been sent.'), false); return; }
+    if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') { openPage(); setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ پیام هنوز ارسال نشده.', 'Sign in with Google and accept the privacy notice; the message has not been sent.'), false); return; }
     sendMessage($('raInput').value); $('raInput').value = ''; return;
   }
   if (target.hasAttribute('data-ra-approve')) { handleApproval(target.getAttribute('data-ra-approve'), true); return; }
@@ -792,7 +792,7 @@ function handleSubmit(event) {
   if (!value) return;
   if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') {
     renderSetup();
-    setStatus(tr('اول کلید API و رضایت ارسال داده را ثبت کن؛ متن پیام باقی مانده و هنوز ارسال نشده است.', 'Set up your API key and consent first; your message remains here and has not been sent.'), false);
+    setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ متن پیام باقی مانده و هنوز ارسال نشده است.', 'Sign in with Google and accept the privacy notice first; your message remains here and has not been sent.'), false);
     return;
   }
   input.value = '';
