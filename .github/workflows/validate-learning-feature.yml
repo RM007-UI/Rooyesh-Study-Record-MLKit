@@ -4,15 +4,20 @@ on:
   push:
     branches:
       - feature/flashcards-interview-demo
+      - feature/google-login-deepseek
     paths:
-      - 'source/app/src/main/assets/**'
+      - 'source/app/**'
       - 'source/tools/check_html_js.py'
+      - 'ai-proxy/**'
+      - 'README.md'
       - '.github/workflows/validate-learning-feature.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feature/flashcards-interview-demo]
     paths:
-      - 'source/app/src/main/assets/**'
+      - 'source/app/**'
       - 'source/tools/check_html_js.py'
+      - 'ai-proxy/**'
+      - 'README.md'
       - '.github/workflows/validate-learning-feature.yml'
 
 permissions:
@@ -48,7 +53,10 @@ jobs:
           grep -q 'rooyeshFlashcardsV1' source/app/src/main/assets/study_learning.js
           grep -q 'data-rl-enter-demo' source/app/src/main/assets/study_learning.js
           grep -q 'data-rl-grade' source/app/src/main/assets/study_learning.js
-          grep -q 'openrouter/free' source/app/src/main/assets/study_assistant.js
+          grep -q 'deepseek-flash' source/app/src/main/assets/study_assistant.js
+          grep -q 'beginGoogleSignIn' source/app/src/main/java/com/rooyesh/study/MainActivity.java
+          grep -q 'rooyesh_google_web_client_id' source/app/src/main/res/values/ai_config.xml
+          node --check ai-proxy/src/index.js
           grep -q 'RooyeshAssistantBridge' source/app/src/main/assets/index.html
           grep -q 'data-ra-approve' source/app/src/main/assets/study_assistant.js
       - name: Set up Java 17
