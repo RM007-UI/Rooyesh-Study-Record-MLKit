@@ -534,7 +534,7 @@ function openPage() {
     googleIdToken = String(token || ''); googleUserEmail = String(email || '');
     renderSetup();
     if (error) setStatus(String(error), true);
-    else if (googleIdToken) setStatus(tr('ورود انجام شد؛ حالا می‌توانی سؤال بپرسی.', 'Signed in; you can ask a question now.'), false);
+    else if (googleIdToken) setStatus(proxyEndpoint ? tr('ورود انجام شد؛ حالا می‌توانی سؤال بپرسی.', 'Signed in; you can ask a question now.') : tr('ورود گوگل آماده است، اما سرویس هوش مصنوعی هنوز پیکربندی نشده.', 'Google sign-in works, but the AI service is not configured yet.'), !proxyEndpoint);
   };
   try {
     if (window.RooyeshNative && window.RooyeshNative.getAiProxyUrl) proxyEndpoint = String(window.RooyeshNative.getAiProxyUrl() || '').trim();
@@ -778,7 +778,6 @@ function handleClick(event) {
     try { localStorage.setItem(CONSENT_STORE, 'yes'); } catch (_) {}
     const nativeBridge = window.RooyeshNative;
     if (!nativeBridge || !nativeBridge.beginGoogleSignIn) { setStatus(tr('ورود گوگل در این نسخه آماده نیست.', 'Google sign-in is not configured in this build.'), true); return; }
-    if (!proxyEndpoint) { setStatus(tr('نشانی سرویس هوش مصنوعی هنوز تنظیم نشده است.', 'The AI service endpoint has not been configured.'), true); return; }
     nativeBridge.beginGoogleSignIn(); return;
   }
   if (target.hasAttribute('data-ra-google-logout')) {
