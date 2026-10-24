@@ -31,11 +31,11 @@
 - ساخت فلش‌کارت سؤال/پاسخ برای هر درس و مرور فعال با ارزیابی «دوباره / سخت / خوب / آسان».
 - زمان‌بندی مرور بعدی بر اساس ارزیابی دانش‌آموز و نمایش کارت‌های سررسید.
 - گزارش هفتگی از زمان مطالعه، تعداد جلسه‌ها، روزهای فعال و درس پرتکرار؛ گزارش صرفاً توصیفی است و جای سنجش تسلط را نمی‌گیرد.
-- حالت نمایش مصاحبه با داده‌های نمونه که از سوابق واقعی و کارت‌های شخصی جداست.
+- حالت آزمایشی با داده‌های نمونه که از سوابق واقعی و کارت‌های شخصی جداست.
 - قابلیت‌های این شاخه هنوز باید روی گوشی آزمایش شوند؛ تا پایان بررسی، APK نسخهٔ اصلی جایگزین نمی‌شود.
 
 ## Rooyesh AI (experimental)
 
 The app now has an optional cloud study assistant using OpenRouter's free-model router (`openrouter/free`). It requires the user to create and enter their own API key. No shared key is bundled in the APK or repository. Free model capacity is rate-limited and may be unavailable at times.
 
-The assistant can read selected study records, goals, notes, plans, flashcards and mood check-ins through app tools; open the translator, Arabic lessons or periodic table; and propose local changes. Every write operation requires an explicit confirmation inside the app. Study data and messages selected for a response are sent to OpenRouter and its routed model provider, so the user must acknowledge the privacy notice before sending anything. The key is stored in the app's local WebView storage, not encrypted by this JavaScript module. Do not use a valuable/shared key and do not send highly sensitive information.
+The assistant can read selected study records, goals, notes, plans, flashcards and mood check-ins through app tools; open the translator, Arabic lessons or periodic table; and propose local changes. Every write operation requires an explicit confirmation inside the app. Recent conversation history (up to 24 messages) and up to 40 user-managed memory notes can be saved locally between app launches. Memory can be toggled off; saved notes can be listed, edited and deleted, and the chat history can be cleared separately. Memory items requested by the AI are only saved after explicit user approval. When enabled, recent conversation context and relevant saved memory may be sent with a cloud request. Study data and messages selected for a response are sent to OpenRouter and its routed model provider, so the user must acknowledge the privacy notice before sending anything. The key and memory are stored in the app's local WebView storage, not encrypted by this JavaScript module. Do not use a valuable/shared key and do not store sensitive personal data or secrets.
