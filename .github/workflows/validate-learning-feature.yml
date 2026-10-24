@@ -74,7 +74,7 @@ jobs:
       - name: Inject configured OAuth and DeepSeek endpoint
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
-          DEEPSEEK_PROXY_URL: ${{ vars.DEEPSEEK_PROXY_URL }}
+          DEEPSEEK_PROXY_URL: ${{ vars.DEEPSEEK_PROXY_URL || 'https://rooyesh-deepseek-proxy.reza86mirzaei.workers.dev' }}
         shell: bash
         run: |
           set -euo pipefail
