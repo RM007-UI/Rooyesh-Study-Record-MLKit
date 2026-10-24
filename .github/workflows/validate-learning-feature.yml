@@ -1,16 +1,6 @@
 name: Validate learning feature
 
 on:
-  push:
-    branches:
-      - feature/flashcards-interview-demo
-      - feature/google-login-deepseek
-    paths:
-      - 'source/app/**'
-      - 'source/tools/check_html_js.py'
-      - 'ai-proxy/**'
-      - 'README.md'
-      - '.github/workflows/validate-learning-feature.yml'
   pull_request:
     branches: [main, feature/flashcards-interview-demo]
     paths:
