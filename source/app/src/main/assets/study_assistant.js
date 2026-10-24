@@ -801,7 +801,7 @@ function handleSubmit(event) {
   const input = $('raInput');
   const value = String(input.value || '').trim();
   if (!value) return;
-  if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') {
+  if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') {
     renderSetup();
     setStatus(tr('اول کلید API و رضایت ارسال داده را ثبت کن؛ متن پیام باقی مانده و هنوز ارسال نشده است.', 'Set up your API key and consent first; your message remains here and has not been sent.'), false);
     return;
