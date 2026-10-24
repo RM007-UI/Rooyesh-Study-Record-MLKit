@@ -1,10 +1,11 @@
 (function () {
 'use strict';
 
-const KEY_STORE = 'rooyeshOpenRouterApiKey';
-const CONSENT_STORE = 'rooyeshOpenRouterConsent';
-const MODEL = 'openrouter/free';
-const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const CONSENT_STORE = 'rooyeshDeepSeekPrivacyConsent';
+const MODEL = 'deepseek-flash';
+let googleIdToken = '';
+let googleUserEmail = '';
+let proxyEndpoint = '';
 const MEMORY_STORE = 'rooyeshAiMemoryV1';
 const MEMORY_ENABLED_STORE = 'rooyeshAiMemoryEnabledV1';
 const CHAT_STORE = 'rooyeshAiConversationV1';
@@ -529,6 +530,16 @@ function openPage() {
   document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('hidden', p.id !== 'assistantPage'); });
   document.querySelectorAll('.nav-button').forEach(function (b) { b.classList.remove('active'); });
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.RooyeshGoogleAuthResult = function (token, email, error) {
+    googleIdToken = String(token || ''); googleUserEmail = String(email || '');
+    renderSetup();
+    if (error) setStatus(String(error), true);
+    else if (googleIdToken) setStatus(tr('ورود انجام شد؛ حالا می‌توانی سؤال بپرسی.', 'Signed in; you can ask a question now.'), false);
+  };
+  try {
+    if (window.RooyeshNative && window.RooyeshNative.getAiProxyUrl) proxyEndpoint = String(window.RooyeshNative.getAiProxyUrl() || '').trim();
+    if (window.RooyeshNative && window.RooyeshNative.restoreGoogleSignIn) window.RooyeshNative.restoreGoogleSignIn();
+  } catch (_) {}
   renderSetup();
   renderConversation();
   renderMemoryControls();
@@ -542,9 +553,10 @@ function goHome() {
 function renderSetup() {
   const root = $('raSetup');
   if (!root) return;
-  const hasKey = !!localStorage.getItem(KEY_STORE);
   const consent = localStorage.getItem(CONSENT_STORE) === 'yes';
-  root.innerHTML = '<section class="ra-setup"><h3>' + esc(tr('اتصال مدل رایگان', 'Connect free model')) + '<span class="ra-free-pill">FREE</span></h3><p>' + esc(tr('مدل از مسیر OpenRouter Free انتخاب می‌شود و از ابزارهای برنامه پشتیبانی می‌کند. کلید API را خودت ایجاد کن؛ کلید مشترکی داخل APK قرار نداده‌ایم. کلید روی همین دستگاه ذخیره می‌شود، نه در مخزن گیت‌هاب.', 'The OpenRouter Free router chooses a free model with tool support. Create your own API key; no shared key is bundled in the APK. Your key is saved on this device, not in the GitHub repository.')) + '</p><div class="ra-model-label">Model: <b>openrouter/free</b></div><div class="ra-key-row"><input id="raKeyInput" class="input" type="password" autocomplete="off" spellcheck="false" maxlength="240" placeholder="' + esc(hasKey ? tr('کلید ذخیره شده؛ برای تغییر، کلید جدید وارد کن', 'Key saved; enter a new key to replace it') : tr('کلید OpenRouter را وارد کن', 'Enter your OpenRouter API key')) + '" aria-label="' + esc(tr('کلید API', 'API key')) + '"><button type="button" class="btn btn-quiet" data-ra-reveal>' + esc(tr('نمایش', 'Show')) + '</button></div><label class="ra-consent"><input id="raConsent" type="checkbox" ' + (consent ? 'checked' : '') + '><span>' + esc(tr('می‌دانم متن پیام‌ها، بخش اخیر گفت‌وگو و حافظهٔ فعال که برای پاسخ لازم باشند، از اینترنت به OpenRouter و تأمین‌کنندهٔ مدل ارسال می‌شوند. اطلاعات بسیار خصوصی را نمی‌فرستم.', 'I understand messages, recent conversation context, and enabled saved memories relevant to a response may be sent over the internet to OpenRouter and its selected model provider. I will not send highly sensitive information.')) + '</span></label><div class="ra-setup-actions"><button type="button" class="btn btn-primary" data-ra-save-key>' + esc(tr('ذخیره و فعال‌سازی', 'Save and enable')) + '</button><button type="button" class="btn btn-soft" data-ra-key-help>' + esc(tr('گرفتن کلید رایگان', 'Get free API key')) + ' ↗</button><button type="button" class="btn btn-quiet" data-ra-clear-key>' + esc(tr('حذف کلید', 'Remove key')) + '</button></div><p class="ra-status-line" id="raSetupStatus">' + esc(hasKey && consent ? tr('اتصال تنظیم شده است؛ برای ادامه پیام بفرست.', 'Connection is configured. Send a message to continue.') : tr('برای شروع به کلید خودت و تأیید اطلاعیه حریم خصوصی نیاز است.', 'Enter your own key and acknowledge the privacy notice to begin.')) + '</p></section>';
+  const configured = !!proxyEndpoint;
+  const signedIn = !!googleIdToken;
+  root.innerHTML = '<section class="ra-setup"><h3>' + esc(tr('دستیار هوشمند رویش', 'Rooyesh AI assistant')) + '<span class="ra-free-pill">DeepSeek</span></h3><p>' + esc(tr('برای استفاده، با حساب گوگل وارد شو. کلید هوش مصنوعی داخل گوشی یا APK ذخیره نمی‌شود.', 'Sign in with Google to use the assistant. No AI API key is stored in the app or APK.')) + '</p><div class="ra-model-label">' + esc(tr('مدل پیش‌فرض: DeepSeek Flash', 'Default model: DeepSeek Flash')) + '</div><label class="ra-consent"><input id="raConsent" type="checkbox" ' + (consent ? 'checked' : '') + '><span>' + esc(tr('می‌دانم پیام‌ها و داده‌هایی که برای پاسخ لازم‌اند از طریق سرویس ابری برای تولید پاسخ ارسال می‌شوند. اطلاعات حساس را ارسال نمی‌کنم.', 'I understand that messages and relevant data are sent through a cloud service to generate responses. I will not send sensitive information.')) + '</span></label><div class="ra-setup-actions">' + (signedIn ? '<button type="button" class="btn btn-primary" data-ra-google-login>' + esc(tr('اتصال برقرار است؛ تازه‌سازی ورود', 'Connected; refresh sign-in')) + '</button><button type="button" class="btn btn-quiet" data-ra-google-logout>' + esc(tr('خروج از حساب', 'Sign out')) + '</button>' : '<button type="button" class="btn btn-primary" data-ra-google-login>' + esc(tr('ورود با حساب گوگل', 'Continue with Google')) + '</button>') + '</div><p class="ra-status-line ' + (!configured ? 'ra-error' : '') + '" id="raSetupStatus">' + esc(!configured ? tr('اتصال سرور هنوز پیکربندی نشده؛ پس از تنظیم سرویس، این بخش فعال می‌شود.', 'The AI service endpoint is not configured yet. This section becomes active after setup.') : signedIn ? tr('وارد شدی' + (googleUserEmail ? ' با ' + googleUserEmail : '') + '. حالا می‌توانی سؤال بپرسی.', 'Signed in' + (googleUserEmail ? ' as ' + googleUserEmail : '') + '. You can ask a question now.') : tr('برای شروع با حساب گوگل وارد شو.', 'Sign in with Google to get started.')) + '</p></section>';
 }
 function renderConversation() {
   const root = $('raMessages');
@@ -591,41 +603,34 @@ function toolResultText(value) {
   try { return JSON.stringify(value); } catch (_) { return '{"error":"Tool result could not be serialized."}'; }
 }
 async function callModel(messages) {
-  const key = localStorage.getItem(KEY_STORE);
-  if (!key) throw new Error(tr('ابتدا کلید OpenRouter را تنظیم کن.', 'Set up your OpenRouter API key first.'));
-  if (localStorage.getItem(CONSENT_STORE) !== 'yes') throw new Error(tr('برای استفاده از مدل ابری باید اطلاعیه حریم خصوصی را تأیید کنی.', 'Acknowledge the cloud data-sharing notice first.'));
+  if (!googleIdToken) throw new Error(tr('ابتدا با حساب گوگل وارد شو.', 'Sign in with Google first.'));
+  if (!proxyEndpoint) throw new Error(tr('سرویس هوش مصنوعی هنوز پیکربندی نشده است.', 'The AI service has not been configured yet.'));
+  if (localStorage.getItem(CONSENT_STORE) !== 'yes') throw new Error(tr('ابتدا اطلاعیه حریم خصوصی را تأیید کن.', 'Accept the privacy notice first.'));
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  const timeout = controller ? setTimeout(function () { controller.abort(); }, 45000) : null;
+  const timeout = controller ? setTimeout(function () { controller.abort(); }, 60000) : null;
   let response;
   try {
-    response = await fetch(ENDPOINT, {
+    response = await fetch(proxyEndpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + key,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/RM007-UI/Rooyesh-Study-Record-MLKit',
-        'X-Title': 'Rooyesh Study Assistant'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: messages,
-        tools: tools,
-        tool_choice: 'auto',
-        parallel_tool_calls: false,
-        temperature: 0.25
-      }),
+      headers: { 'Authorization': 'Bearer ' + googleIdToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, messages: messages, tools: tools, tool_choice: 'auto', parallel_tool_calls: false, temperature: 0.25 }),
       signal: controller ? controller.signal : undefined
     });
   } catch (error) {
     if (error && error.name === 'AbortError') throw new Error(tr('پاسخ مدل بیش از حد طول کشید. دوباره تلاش کن.', 'The model took too long. Please try again.'));
-    throw new Error(tr('ارتباط با مدل برقرار نشد. اینترنت، محدودیت سرویس یا اتصال WebView را بررسی کن.', 'Could not reach the model. Check internet, provider limits, or WebView connectivity.'));
+    throw new Error(tr('اتصال به سرویس هوش مصنوعی برقرار نشد. اینترنت یا پیکربندی سرویس را بررسی کن.', 'Could not reach the AI service. Check internet or service configuration.'));
   } finally { if (timeout) clearTimeout(timeout); }
   const text = await response.text();
   const data = safeParse(text, null);
   if (!response.ok) {
     const message = data && data.error && (data.error.message || data.error.code);
-    if (response.status === 401 || response.status === 403) throw new Error(tr('کلید رد شد یا اجازه دسترسی ندارد. کلید را در OpenRouter بررسی کن.', 'The API key was rejected or lacks access. Check it in OpenRouter.'));
-    if (response.status === 429) throw new Error(tr('سهمیه رایگان موقتاً تمام شده یا درخواست‌ها زیاد شده‌اند. کمی بعد دوباره امتحان کن.', 'The free route is temporarily rate-limited. Try again later.'));
+    if (response.status === 401 || response.status === 403) {
+      googleIdToken = '';
+      if (window.RooyeshNative && window.RooyeshNative.restoreGoogleSignIn) window.RooyeshNative.restoreGoogleSignIn();
+      renderSetup();
+      throw new Error(tr('ورود گوگل منقضی شده؛ دوباره وارد شو.', 'Google sign-in expired. Please sign in again.'));
+    }
+    if (response.status === 429) throw new Error(tr('محدودیت مصرف موقتاً فعال شده؛ کمی بعد دوباره تلاش کن.', 'The usage limit is active. Try again later.'));
     throw new Error((message ? String(message).slice(0, 300) + ' — ' : '') + 'HTTP ' + response.status);
   }
   const choice = data && data.choices && data.choices[0];
@@ -648,8 +653,8 @@ async function handleToolCalls(messages, assistantMessage) {
 async function sendMessage(text) {
   if (busy || !String(text || '').trim()) return;
   const userText = String(text).trim().slice(0, 2500);
-  if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') {
-    setStatus(tr('برای ارسال پیام، اول مدل رایگان را تنظیم کن.', 'Set up the free model before sending messages.'), true);
+  if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') {
+    setStatus(tr('برای ارسال پیام، ورود با گوگل و اطلاعیه حریم خصوصی را تکمیل کن.', 'Sign in with Google and accept the privacy notice before sending messages.'), true);
     renderSetup();
     return;
   }
@@ -793,12 +798,19 @@ function handleClick(event) {
   }
   if (target.hasAttribute('data-ra-open')) { openPage(); return; }
   if (target.hasAttribute('data-ra-home')) { goHome(); return; }
-  if (target.hasAttribute('data-ra-save-key')) { saveKey(); return; }
-  if (target.hasAttribute('data-ra-key-help')) { keyHelp(); return; }
-  if (target.hasAttribute('data-ra-clear-key')) { removeKey(); return; }
-  if (target.hasAttribute('data-ra-reveal')) {
-    const input = $('raKeyInput'); if (input) input.type = input.type === 'password' ? 'text' : 'password';
-    target.textContent = input && input.type === 'text' ? tr('پنهان', 'Hide') : tr('نمایش', 'Show'); return;
+  if (target.hasAttribute('data-ra-google-login')) {
+    const consent = $('raConsent');
+    if (!consent || !consent.checked) { setStatus(tr('برای استفاده از دستیار، اطلاعیه حریم خصوصی را تأیید کن.', 'Accept the privacy notice to use the assistant.'), true); return; }
+    try { localStorage.setItem(CONSENT_STORE, 'yes'); } catch (_) {}
+    const nativeBridge = window.RooyeshNative;
+    if (!nativeBridge || !nativeBridge.beginGoogleSignIn) { setStatus(tr('ورود گوگل در این نسخه آماده نیست.', 'Google sign-in is not configured in this build.'), true); return; }
+    if (!proxyEndpoint) { setStatus(tr('نشانی سرویس هوش مصنوعی هنوز تنظیم نشده است.', 'The AI service endpoint has not been configured.'), true); return; }
+    nativeBridge.beginGoogleSignIn(); return;
+  }
+  if (target.hasAttribute('data-ra-google-logout')) {
+    googleIdToken = ''; googleUserEmail = '';
+    try { if (window.RooyeshNative && window.RooyeshNative.signOutGoogle) window.RooyeshNative.signOutGoogle(); } catch (_) {}
+    renderSetup(); setStatus(tr('از حساب خارج شدی.', 'Signed out.'), false); return;
   }
   if (target.hasAttribute('data-ra-prompt')) {
     $('raInput').value = target.getAttribute('data-ra-prompt');
