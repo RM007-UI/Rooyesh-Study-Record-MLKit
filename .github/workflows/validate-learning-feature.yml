@@ -1,0 +1,49 @@
+name: Validate learning feature
+
+on:
+  push:
+    branches:
+      - feature/flashcards-interview-demo
+    paths:
+      - 'source/app/src/main/assets/**'
+      - 'source/tools/check_html_js.py'
+      - '.github/workflows/validate-learning-feature.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'source/app/src/main/assets/**'
+      - 'source/tools/check_html_js.py'
+      - '.github/workflows/validate-learning-feature.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-and-wiring:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check app JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 source/tools/check_html_js.py \
+            source/app/src/main/assets/index.html \
+            source/app/src/main/assets/translator_offline.js \
+            source/app/src/main/assets/study_mood.js \
+            source/app/src/main/assets/study_tools.js \
+            source/app/src/main/assets/study_alarm.js \
+            source/app/src/main/assets/study_learning.js
+      - name: Verify feature wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'src="study_learning.js"' source/app/src/main/assets/index.html
+          grep -q 'rooyeshFlashcardsV1' source/app/src/main/assets/study_learning.js
+          grep -q 'data-rl-enter-demo' source/app/src/main/assets/study_learning.js
+          grep -q 'data-rl-grade' source/app/src/main/assets/study_learning.js
