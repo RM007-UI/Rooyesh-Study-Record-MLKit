@@ -36,6 +36,7 @@ jobs:
           test -s source/app/src/main/assets/study_mood.js
           test -s source/app/src/main/assets/study_tools.js
           test -s source/app/src/main/assets/study_learning.js
+          test -s source/app/src/main/assets/study_assistant.js
           test -s source/app/src/main/res/drawable/ic_stat_rooyesh.xml
           test -s source/app/src/main/java/com/rooyesh/study/StudyNotifications.java
           test -s source/app/src/main/java/com/rooyesh/study/DailyReminderReceiver.java
@@ -73,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/check_html_js.py app/src/main/assets/index.html app/src/main/assets/translator_offline.js app/src/main/assets/study_mood.js app/src/main/assets/study_tools.js app/src/main/assets/study_alarm.js app/src/main/assets/study_learning.js
+          python3 tools/check_html_js.py app/src/main/assets/index.html app/src/main/assets/translator_offline.js app/src/main/assets/study_mood.js app/src/main/assets/study_tools.js app/src/main/assets/study_alarm.js app/src/main/assets/study_learning.js app/src/main/assets/study_assistant.js
           python3 tools/verify_mlkit_bridge.py
           grep -q "function persistTimerRecovery" app/src/main/assets/index.html
           grep -q "savedAt:now" app/src/main/assets/index.html
