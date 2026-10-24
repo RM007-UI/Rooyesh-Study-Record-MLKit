@@ -260,6 +260,8 @@ body.dark-mode .translator-model-tools{background:rgba(45,65,48,.22)}
 .study-alarm-actions .btn{flex:1 1 110px}
 </style>
 <script src="study_alarm.js"></script>
+<script src="study_learning.js"></script>
+<script src="study_assistant.js"></script>
 <script>
 (()=>{'use strict';
 /* Small compatibility helpers for older Android System WebView builds. */
@@ -481,6 +483,124 @@ $('languageSelect').addEventListener('change',()=>{const next=$('languageSelect'
 function showPage(pageId){document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===pageId));document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==pageId));window.scrollTo({top:0,behavior:'smooth'});if(pageId==='recordsPage')renderRecords();if(pageId==='notesPage')renderNotes();if(pageId==='plannerPage')renderPlanner();if(pageId==='calendarPage')renderCalendar();if(pageId==='translatorPage'){refreshOfflineModelStatus()}}
 document.querySelectorAll('[data-page]').forEach(button=>button.addEventListener('click',()=>showPage(button.dataset.page)));
 $('todayLabel').addEventListener('click',()=>showPage('calendarPage'));
+
+
+window.RooyeshAssistantBridge = {
+  getState: function () {
+    return {
+      language: language,
+      dailyGoalMinutes: goal,
+      records: records.slice(-120).map(function (r) { return { id: r.id, subject: r.subject, minutes: r.minutes, date: r.date, note: r.note || '', source: r.source || 'manual' }; }),
+      notes: notes.slice(-60).map(function (n) { return { id: n.id, title: n.title, date: n.date, body: n.body, updated: n.updated }; }),
+      studyPlan: studyPlan ? JSON.parse(JSON.stringify(studyPlan)) : null,
+      preferences: { theme: themeMode, blur: blurMode, translatorMode: translatorMode, translatorDirection: translatorDirection },
+      timer: { running: running === true, totalSeconds: Math.max(0, Number(totalSeconds) || 0), remainingSeconds: Math.max(0, Number(remainingNow()) || 0), elapsedSeconds: Math.max(0, Number(elapsedNow()) || 0), subject: String($('subject').value || '').slice(0, 70) }
+    };
+  },
+  addStudyRecord: function (data) {
+    if (!data || !String(data.subject || '').trim()) return { ok: false, message: 'Subject is required.' };
+    const mins = Number(data.minutes);
+    if (!Number.isInteger(mins) || mins < 1 || mins > 1440) return { ok: false, message: 'Minutes must be 1 to 1440.' };
+    const date = parseCalendarInput(String(data.date || '')) || today();
+    addRecord(String(data.subject).slice(0, 100), mins, date, String(data.note || '').slice(0, 1000), 'assistant');
+    return { ok: true, message: 'Study record added.', date: date, minutes: mins };
+  },
+  createNote: function (data) {
+    if (!data || !String(data.body || '').trim()) return { ok: false, message: 'Note body is required.' };
+    const date = parseCalendarInput(String(data.date || '')) || today();
+    const item = {
+      id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+      title: String(data.title || (language === 'en' ? 'AI study note' : 'یادداشت دستیار آموزشی')).trim().slice(0, 120),
+      date: date,
+      body: String(data.body).trim().slice(0, 12000),
+      created: Date.now(),
+      updated: Date.now()
+    };
+    notes.push(item);
+    if (!saveNotes()) { notes = notes.filter(function (n) { return n.id !== item.id; }); return { ok: false, message: 'Unable to save note.' }; }
+    renderNotes();
+    notify(tr('یادداشت دستیار ذخیره شد.','Assistant note saved.'));
+    return { ok: true, message: 'Note saved.', id: item.id };
+  },
+  setDailyGoal: function (minutes) {
+    const value = Number(minutes);
+    if (!Number.isInteger(value) || value < 1 || value > 1440) return { ok: false, message: 'Daily goal must be 1–1440 minutes.' };
+    goal = value;
+    $('goal').value = String(value);
+    save();
+    renderStats();
+    renderGrowthTree(true);
+    notify(tr('هدف روزانه به‌روزرسانی شد.','Daily goal updated.'));
+    return { ok: true, dailyGoalMinutes: goal };
+  },
+  createStudyPlan: function (data) {
+    if (!data) return { ok: false, message: 'Plan data is required.' };
+    const dayCount = Number(data.days);
+    const partsCount = Number(data.partsPerDay);
+    if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > 60 || !Number.isInteger(partsCount) || partsCount < 1 || partsCount > 16 || dayCount * partsCount > 480) {
+      return { ok: false, message: 'Plan must have 1–60 days, 1–16 parts per day, and at most 480 total parts.' };
+    }
+    const start = parseCalendarInput(String(data.startDate || '')) || today();
+    const tasks = Array.isArray(data.tasks) ? data.tasks.map(function (x) { return String(x || '').trim().slice(0, 200); }).filter(Boolean).slice(0, 480) : [];
+    const parts = Array(partsCount).fill('');
+    studyPlan = {
+      title: String(data.title || (language === 'en' ? 'Study plan' : 'برنامه درسی دستیار')).trim().slice(0, 100),
+      startDate: start,
+      daysCount: dayCount,
+      partsPerDay: partsCount,
+      days: Array.from({ length: dayCount }, function (_, i) {
+        return { date: addDaysISO(start, i), parts: parts.map(function () { return ''; }) };
+      }),
+      created: Date.now(),
+      updated: Date.now()
+    };
+    tasks.forEach(function (task, i) {
+      if (i < dayCount * partsCount) studyPlan.days[Math.floor(i / partsCount)].parts[i % partsCount] = task;
+    });
+    saveStudyPlan();
+    renderPlanner();
+    notify(tr('برنامه درسی با موفقیت ساخته شد.','Study plan created.'));
+    return { ok: true, title: studyPlan.title, days: dayCount, partsPerDay: partsCount };
+  },
+  setTimerDuration: function (minutes) {
+    const value = Number(minutes);
+    if (!Number.isInteger(value) || value < 1 || value > 1440) return { ok: false, message: 'Timer duration must be 1–1440 minutes.' };
+    if (running) return { ok: false, message: 'Pause or cancel the running timer first.' };
+    $('timerDuration').value = String(value);
+    totalSeconds = value * 60;
+    remaining = totalSeconds;
+    elapsed = 0;
+    completed = false;
+    paintClock();
+    persistTimerRecovery(true);
+    return { ok: true, timerMinutes: value };
+  },
+  startTimer: function () {
+    if (running) return { ok: true, message: 'Timer is already running.' };
+    startTimer();
+    return { ok: true, message: 'Timer started.', timer: { running: running === true, remainingSeconds: remainingNow() } };
+  },
+  pauseTimer: function () {
+    if (!running) return { ok: true, message: 'Timer is not running.' };
+    pauseTimer();
+    return { ok: true, message: 'Timer paused.', timer: { running: running === true, remainingSeconds: remainingNow() } };
+  },
+  cancelTimer: function () {
+    if (typeof cancelTimer !== 'function') return { ok: false, message: 'Timer cancel action is unavailable.' };
+    cancelTimer();
+    return { ok: true, message: 'Timer cancelled.' };
+  },
+  navigateTo: function (section) {
+    const allowed = { home: 'homePage', records: 'recordsPage', notes: 'notesPage', planner: 'plannerPage', calendar: 'calendarPage', translator: 'translatorPage', settings: 'settingsPage', learning: 'learningPage' };
+    const page = allowed[String(section || '')];
+    if (!page || !document.getElementById(page)) return { ok: false, message: 'Unknown or unavailable section.' };
+    if (page === 'learningPage') {
+      document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('hidden', x.id !== page); });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else showPage(page);
+    return { ok: true, section: section };
+  }
+};
 
 applyLanguage();
 render();
