@@ -266,7 +266,7 @@ function renderReportView(report) {
   return html;
 }
 function readGoal() {
-  try { return Math.max(60, Math.min(10080, Number(localStorage.getItem('rooyeshGoal')) || 120) * 7); }
+  try { return Math.max(1, Math.min(1440, Number(localStorage.getItem('rooyeshGoal')) || 120)) * 7; }
   catch (_) { return 840; }
 }
 function beginSession(which, specificId) {
