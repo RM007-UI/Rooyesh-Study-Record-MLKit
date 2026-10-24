@@ -99,6 +99,36 @@ public final class MainActivity extends Activity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_GOOGLE_SIGN_IN) return;
+        if (googleSignInClient == null) {
+            sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
+            return;
+        }
+        try {
+            GoogleSignInAccount account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException.class);
+            googleIdToken = account != null && account.getIdToken() != null ? account.getIdToken() : "";
+            googleEmail = account != null && account.getEmail() != null ? account.getEmail() : "";
+            if (googleIdToken.isEmpty()) sendGoogleAuthResult("", "", "Google did not return an ID token. Check the Web OAuth client ID.");
+            else sendGoogleAuthResult(googleIdToken, googleEmail, "");
+        } catch (ApiException error) {
+            sendGoogleAuthResult("", "", "Google sign-in failed (code " + error.getStatusCode() + "). Check internet and OAuth setup.");
+        }
+    }
+
+    private void sendGoogleAuthResult(String token, String email, String error) {
+        final String tokenJson = JSONObject.quote(token == null ? "" : token);
+        final String emailJson = JSONObject.quote(email == null ? "" : email);
+        final String errorJson = JSONObject.quote(error == null ? "" : error);
+        runOnUiThread(() -> {
+            if (webView == null) return;
+            webView.evaluateJavascript("if(window.RooyeshGoogleAuthResult){window.RooyeshGoogleAuthResult("
+                    + tokenJson + "," + emailJson + "," + errorJson + ");}", null);
+        });
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_POST_NOTIFICATIONS) {
@@ -323,7 +353,7 @@ public final class MainActivity extends Activity {
                 sendGoogleAuthResult("", "", "Google OAuth client ID is not configured in this build.");
                 return;
             }
-            googleSignInClient.silentSignIn().addOnCompleteListener(this, task -> {
+            googleSignInClient.silentSignIn().addOnCompleteListener(MainActivity.this, task -> {
                 if (task.isSuccessful() && task.getResult() != null) {
                     GoogleSignInAccount account = task.getResult();
                     googleIdToken = account.getIdToken() == null ? "" : account.getIdToken();
