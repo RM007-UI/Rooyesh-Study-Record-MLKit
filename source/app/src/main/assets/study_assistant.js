@@ -590,7 +590,7 @@ function removeKey() {
 function toolResultText(value) {
   try { return JSON.stringify(value); } catch (_) { return '{"error":"Tool result could not be serialized."}'; }
 }
-async function callModel(messages) {
+async function callModel(messages, allowTools) {
   const key = localStorage.getItem(KEY_STORE);
   if (!key) throw new Error(tr('ابتدا کلید OpenRouter را تنظیم کن.', 'Set up your OpenRouter API key first.'));
   if (localStorage.getItem(CONSENT_STORE) !== 'yes') throw new Error(tr('برای استفاده از مدل ابری باید اطلاعیه حریم خصوصی را تأیید کنی.', 'Acknowledge the cloud data-sharing notice first.'));
@@ -609,9 +609,7 @@ async function callModel(messages) {
       body: JSON.stringify({
         model: MODEL,
         messages: messages,
-        tools: tools,
-        tool_choice: 'auto',
-        parallel_tool_calls: false,
+        ...(allowTools === false ? { tool_choice: 'none' } : { tools: tools, tool_choice: 'auto', parallel_tool_calls: false }),
         temperature: 0.25,
         max_tokens: 1400
       }),
@@ -671,8 +669,9 @@ async function sendMessage(text) {
     if (memoryEnabled) history.slice(-12).forEach(function (m) { messages.push({ role: m.role, content: m.content }); });
     else messages.push({ role: 'user', content: userText });
     let finalMessage = null;
-    for (let loop = 0; loop < 5; loop++) {
-      const modelMessage = await callModel(messages);
+    for (let loop = 0; loop < 4; loop++) {
+      // Allow tool use for the first three rounds, then force a normal answer.
+      const modelMessage = await callModel(messages, loop < 3);
       if (modelMessage.tool_calls && modelMessage.tool_calls.length) {
         await handleToolCalls(messages, modelMessage);
         continue;
@@ -680,7 +679,7 @@ async function sendMessage(text) {
       finalMessage = String(modelMessage.content || '').trim();
       break;
     }
-    if (!finalMessage) finalMessage = tr('به سقف تعداد گام‌های ابزار رسیدم. سؤال را کمی محدودتر کن و دوباره بپرس.', 'I reached the tool-step limit. Narrow the request and try again.');
+    if (!finalMessage) finalMessage = tr('نتونستم پاسخ نهایی رو کامل بسازم. لطفاً دوباره بپرس یا سؤال رو کوتاه‌تر کن.', 'I could not complete a final answer. Please retry or shorten the request.');
     if (currentId !== conversationId) return;
     history.push({ role: 'assistant', content: finalMessage });
     if (history.length > 24) history = history.slice(-24);
