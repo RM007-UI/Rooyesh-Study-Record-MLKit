@@ -530,7 +530,12 @@ function openPage() {
   document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('hidden', p.id !== 'assistantPage'); });
   document.querySelectorAll('.nav-button').forEach(function (b) { b.classList.remove('active'); });
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  
+  renderSetup();
+  renderConversation();
+  renderMemoryControls();
+  renderMemoryPanel();
+  $('raInput').focus();
+}
 function goHome() {
   const home = document.querySelector('.nav-button[data-page="homePage"]');
   if (home) home.click();
@@ -550,7 +555,7 @@ function renderConversation() {
   root.innerHTML = history.slice(-18).map(function (m) {
     return '<div class="ra-msg ' + esc(m.role) + '">' + formatMessage(m.content) + '</div>';
   }).join('');
-  if (!history.length) root.innerHTML = '<div class="ra-msg system">' + esc(tr('می‌توانم بخش‌های رویش را توضیح بدهم، داده‌های انتخابی را تحلیل کنم و برای تغییرات قبل از اجرا از تو تأیید بگیرم. برای شروع، کلید رایگان را تنظیم کن.', 'I can explain app sections, analyse selected data and ask before making changes. Set up the free key to start.')) + '</div>';
+  if (!history.length) root.innerHTML = '<div class="ra-msg system">' + esc(tr('می‌توانم بخش‌های رویش را توضیح بدهم، داده‌های انتخابی را تحلیل کنم و برای تغییرات قبل از اجرا از تو تأیید بگیرم. برای شروع با حساب گوگل وارد شو.', 'I can explain app sections, analyse selected data and ask before making changes. Sign in with Google to start.')) + '</div>';
   pendingRoot.innerHTML = pendingActions.slice(-8).map(actionCard).join('');
   root.scrollTop = root.scrollHeight;
 }
@@ -772,7 +777,7 @@ function handleClick(event) {
   }
   if (target.hasAttribute('data-ra-prompt')) {
     $('raInput').value = target.getAttribute('data-ra-prompt');
-    if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') { openPage(); setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ پیام هنوز ارسال نشده.', 'Sign in with Google and accept the privacy notice; the message has not been sent.'), false); return; }
+    if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') { openPage(); setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ پیام هنوز ارسال نشده.', 'Sign in with Google and accept the privacy notice; the message has not been sent.'), false); return; }
     sendMessage($('raInput').value); $('raInput').value = ''; return;
   }
   if (target.hasAttribute('data-ra-approve')) { handleApproval(target.getAttribute('data-ra-approve'), true); return; }
@@ -785,9 +790,9 @@ function handleSubmit(event) {
   const input = $('raInput');
   const value = String(input.value || '').trim();
   if (!value) return;
-  if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') {
+  if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') {
     renderSetup();
-    setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ متن پیام باقی مانده و هنوز ارسال نشده است.', 'Sign in with Google and accept the privacy notice first; your message remains here and has not been sent.'), false);
+    setStatus(tr('اول کلید API و رضایت ارسال داده را ثبت کن؛ متن پیام باقی مانده و هنوز ارسال نشده است.', 'Set up your API key and consent first; your message remains here and has not been sent.'), false);
     return;
   }
   input.value = '';
@@ -800,8 +805,9 @@ function init() {
   $('raInput').addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); $('raComposer').requestSubmit ? $('raComposer').requestSubmit() : $('raSend').click(); }
   });
-window.RooyeshGoogleAuthResult = function (token, email, error) {
-    googleIdToken = String(token || ''); googleUserEmail = String(email || '');
+  window.RooyeshGoogleAuthResult = function (token, email, error) {
+    googleIdToken = String(token || '');
+    googleUserEmail = String(email || '');
     renderSetup();
     if (error) setStatus(String(error), true);
     else if (googleIdToken) setStatus(proxyEndpoint ? tr('ورود انجام شد؛ حالا می‌توانی سؤال بپرسی.', 'Signed in; you can ask a question now.') : tr('ورود گوگل آماده است، اما سرویس هوش مصنوعی هنوز پیکربندی نشده.', 'Google sign-in works, but the AI service is not configured yet.'), !proxyEndpoint);
@@ -810,12 +816,6 @@ window.RooyeshGoogleAuthResult = function (token, email, error) {
     if (window.RooyeshNative && window.RooyeshNative.getAiProxyUrl) proxyEndpoint = String(window.RooyeshNative.getAiProxyUrl() || '').trim();
     if (window.RooyeshNative && window.RooyeshNative.restoreGoogleSignIn) window.RooyeshNative.restoreGoogleSignIn();
   } catch (_) {}
-  renderSetup();
-  renderConversation();
-  renderMemoryControls();
-  renderMemoryPanel();
-  $('raInput').focus();
-}
   renderSetup();
   renderConversation();
   renderMemoryControls();
