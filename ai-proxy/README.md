@@ -12,6 +12,18 @@ This small Cloudflare Worker keeps the **owner's** DeepSeek API key on the serve
 6. Deploy the Worker, then put its URL ending in `/v1/chat/completions` in Android resource `rooyesh_deepseek_proxy_url`.
 7. Build the APK. Test login, expired login, the model response, tool calls, sign-out, and rate limiting before sharing it.
 
+## Deploy from GitHub Actions (no local computer required)
+
+After this branch's workflow is available in the repository, add these **repository secrets** under Settings → Secrets and variables → Actions:
+- `CLOUDFLARE_API_TOKEN` — a Cloudflare API token permitted to deploy Workers
+- `CLOUDFLARE_ACCOUNT_ID` — the Cloudflare account ID
+- `DEEPSEEK_API_KEY` — the app owner's DeepSeek key
+- `GOOGLE_WEB_CLIENT_ID` — the OAuth Web client ID
+
+Also add the repository variable `ENABLE_AI_PROXY_DEPLOY` with value `true`. The deploy job is intentionally disabled unless this opt-in variable is set. A push to `feature/google-login-deepseek` that changes `ai-proxy/**` will then deploy the Worker. Do not paste any secrets into source files, issues, or chat.
+
+After deployment, copy the Worker URL and set the Android configuration values in `source/app/src/main/res/values/ai_config.xml` (or provide the equivalent build variables if the build workflow is configured for them). Google OAuth Android clients must also be registered for the package name and signing-certificate SHA-1 used by the APK.
+
 With Wrangler, from this directory:
 ```sh
 npm install
