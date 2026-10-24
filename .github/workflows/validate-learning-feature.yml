@@ -38,7 +38,8 @@ jobs:
             source/app/src/main/assets/study_mood.js \
             source/app/src/main/assets/study_tools.js \
             source/app/src/main/assets/study_alarm.js \
-            source/app/src/main/assets/study_learning.js
+            source/app/src/main/assets/study_learning.js \
+            source/app/src/main/assets/study_assistant.js
       - name: Verify feature wiring
         shell: bash
         run: |
@@ -47,6 +48,9 @@ jobs:
           grep -q 'rooyeshFlashcardsV1' source/app/src/main/assets/study_learning.js
           grep -q 'data-rl-enter-demo' source/app/src/main/assets/study_learning.js
           grep -q 'data-rl-grade' source/app/src/main/assets/study_learning.js
+          grep -q 'openrouter/free' source/app/src/main/assets/study_assistant.js
+          grep -q 'RooyeshAssistantBridge' source/app/src/main/assets/index.html
+          grep -q 'data-ra-approve' source/app/src/main/assets/study_assistant.js
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
