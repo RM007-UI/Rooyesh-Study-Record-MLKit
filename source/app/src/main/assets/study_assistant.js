@@ -78,6 +78,8 @@ const tools = [
   { type: 'function', function: { name: 'navigate_to_section', description: 'Open an existing section of Rooyesh on the user’s device. This is a navigation action, not a data modification.', parameters: { type: 'object', properties: { section: { type: 'string', enum: ['home', 'records', 'notes', 'planner', 'calendar', 'translator', 'learning', 'settings'] } }, required: ['section'] } } },
   { type: 'function', function: { name: 'open_study_tool', description: 'Open a specific built-in tool panel: translator, Arabic grammar lessons/practice, or the periodic table. This is navigation only.', parameters: { type: 'object', properties: { tool: { type: 'string', enum: ['translate', 'arabic', 'periodic'] } }, required: ['tool'] } } },
   { type: 'function', function: { name: 'get_alarm_config', description: 'Read the currently saved daily reminder/alarm settings from the Android app, if the native bridge is available.', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'search_arabic_lessons', description: 'Search the actual built-in Arabic lessons, examples, explanations, tips and practice questions. Use this before tutoring on one of the app’s Arabic topics.', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Optional topic or word to search.' } } } } },
+  { type: 'function', function: { name: 'search_periodic_table', description: 'Search the 118 built-in periodic-table entries by element name, symbol or atomic number.', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Element name, symbol or atomic number.' } }, required: ['query'] } } },
   { type: 'function', function: { name: 'propose_app_action', description: 'Propose a local change. The app will show the exact change and wait for the student to tap Confirm; you must not claim success until the app reports execution. Supported actions: add_study_record, create_note, create_flashcard, set_daily_goal, create_study_plan.', parameters: { type: 'object', properties: {
     action: { type: 'string', enum: ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm'] },
     subject: { type: 'string' }, minutes: { type: 'integer' }, date: { type: 'string', description: 'Date in YYYY-MM-DD, if relevant.' }, note: { type: 'string' },
@@ -222,6 +224,14 @@ function executeReadTool(name, args) {
       if (!window.RooyeshNative || typeof window.RooyeshNative.getStudyAlarmConfig !== 'function') return { available: false, message: 'Native alarm settings are not available in this environment.' };
       return { available: true, settings: safeParse(window.RooyeshNative.getStudyAlarmConfig(), {}) };
     } catch (error) { return { available: false, message: String(error && error.message || error).slice(0, 180) }; }
+  }
+  if (name === 'search_arabic_lessons') {
+    const bridge = window.RooyeshStudyToolsBridge;
+    return bridge && bridge.searchArabicRules ? { lessons: bridge.searchArabicRules(args.query || '') } : { error: 'Arabic lesson data is not ready.' };
+  }
+  if (name === 'search_periodic_table') {
+    const bridge = window.RooyeshStudyToolsBridge;
+    return bridge && bridge.searchElements ? { elements: bridge.searchElements(args.query || '') } : { error: 'Periodic table data is not ready.' };
   }
   if (name === 'propose_app_action') return proposeAction(args);
   return { error: 'Unknown tool.' };
