@@ -86,9 +86,14 @@ jobs:
           path = Path("app/src/main/res/values/ai_config.xml")
           tree = ET.parse(path)
           root = tree.getroot()
+          proxy_url = os.environ.get("DEEPSEEK_PROXY_URL", "").strip().rstrip("/")
+          # Accept either the Worker base URL or the full OpenAI-compatible endpoint.
+          # The Worker returns HTTP 404 at its root; chat requests must use this path.
+          if proxy_url and not proxy_url.endswith("/v1/chat/completions"):
+              proxy_url += "/v1/chat/completions"
           values = {
               "rooyesh_google_web_client_id": os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip(),
-              "rooyesh_deepseek_proxy_url": os.environ.get("DEEPSEEK_PROXY_URL", "").strip(),
+              "rooyesh_deepseek_proxy_url": proxy_url,
           }
           for name, value in values.items():
               if value:
