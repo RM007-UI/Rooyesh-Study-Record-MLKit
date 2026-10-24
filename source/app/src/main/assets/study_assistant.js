@@ -573,32 +573,6 @@ function setStatus(message, isError) {
   const el = $('raSetupStatus');
   if (el) { el.textContent = message; el.classList.toggle('ra-error', !!isError); }
 }
-function saveKey() {
-  const input = $('raKeyInput');
-  const consent = $('raConsent');
-  const existing = localStorage.getItem(KEY_STORE) || '';
-  const key = String(input && input.value || '').trim() || existing;
-  if (!key || key.length < 12) { setStatus(tr('کلید API معتبر وارد کن.', 'Enter a valid API key.'), true); return; }
-  if (!consent || !consent.checked) { setStatus(tr('برای استفاده از مدل ابری باید اطلاعیه ارسال داده را تأیید کنی.', 'Acknowledge the cloud data-sharing notice to enable the model.'), true); return; }
-  try {
-    localStorage.setItem(KEY_STORE, key);
-    localStorage.setItem(CONSENT_STORE, 'yes');
-    if (input) input.value = '';
-    renderSetup();
-    setStatus(tr('کلید ذخیره شد. حالا یک سؤال بپرس.', 'Key saved. You can now ask a question.'), false);
-  } catch (_) { setStatus(tr('ذخیره‌سازی در دسترس نیست؛ کلید را در تنظیمات مرورگر بررسی کن.', 'Local storage is unavailable; check device storage settings.'), true); }
-}
-function keyHelp() {
-  const url = 'https://openrouter.ai/settings/keys';
-  const w = window.open(url, '_blank');
-  if (!w) setStatus(tr('این صفحه را در مرورگر باز کن: https://openrouter.ai/settings/keys', 'Open this URL in your browser: https://openrouter.ai/settings/keys'), false);
-}
-function removeKey() {
-  try { localStorage.removeItem(KEY_STORE); localStorage.removeItem(CONSENT_STORE); }
-  catch (_) {}
-  renderSetup();
-  setStatus(tr('کلید حذف شد.', 'API key removed.'), false);
-}
 function toolResultText(value) {
   try { return JSON.stringify(value); } catch (_) { return '{"error":"Tool result could not be serialized."}'; }
 }
@@ -814,7 +788,7 @@ function handleClick(event) {
   }
   if (target.hasAttribute('data-ra-prompt')) {
     $('raInput').value = target.getAttribute('data-ra-prompt');
-    if (!localStorage.getItem(KEY_STORE) || localStorage.getItem(CONSENT_STORE) !== 'yes') { openPage(); setStatus(tr('کلید و تأیید اطلاعیه را ثبت کن؛ پیام هنوز ارسال نشده.', 'Save a key and accept the notice; the message has not been sent.'), false); return; }
+    if (!googleIdToken || !proxyEndpoint || localStorage.getItem(CONSENT_STORE) !== 'yes') { openPage(); setStatus(tr('با حساب گوگل وارد شو و اطلاعیه حریم خصوصی را تأیید کن؛ پیام هنوز ارسال نشده.', 'Sign in with Google and accept the privacy notice; the message has not been sent.'), false); return; }
     sendMessage($('raInput').value); $('raInput').value = ''; return;
   }
   if (target.hasAttribute('data-ra-approve')) { handleApproval(target.getAttribute('data-ra-approve'), true); return; }
