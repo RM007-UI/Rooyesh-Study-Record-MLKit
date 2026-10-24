@@ -1,8 +1,8 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
-
 const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
-const GOOGLE_KEYS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
+const GOOGLE_CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs";
 const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/chat/completions";
+let cachedGoogleKeys = null;
+let googleKeysExpiresAt = 0;
 
 function response(body, status, origin = "null") {
   return new Response(JSON.stringify(body), {
@@ -18,6 +18,25 @@ function response(body, status, origin = "null") {
   });
 }
 
+function decodeBase64Url(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, character => character.charCodeAt(0));
+}
+
+async function getGoogleKeys(forceRefresh = false) {
+  if (!forceRefresh && cachedGoogleKeys && Date.now() < googleKeysExpiresAt) return cachedGoogleKeys;
+  const result = await fetch(GOOGLE_CERTS_URL, { cf: { cacheTtl: 300, cacheEverything: true } });
+  if (!result.ok) throw new Error("Could not load Google's public signing keys.");
+  const data = await result.json();
+  cachedGoogleKeys = Array.isArray(data.keys) ? data.keys : [];
+  const cacheHeader = result.headers.get("Cache-Control") || "";
+  const maxAge = Number((cacheHeader.match(/max-age=(\d+)/i) || [])[1]) || 300;
+  googleKeysExpiresAt = Date.now() + Math.min(maxAge, 3600) * 1000;
+  return cachedGoogleKeys;
+}
+
 async function authenticate(request, env) {
   const authorization = request.headers.get("Authorization") || "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
@@ -25,12 +44,39 @@ async function authenticate(request, env) {
   if (!env.GOOGLE_WEB_CLIENT_ID || env.GOOGLE_WEB_CLIENT_ID.startsWith("REPLACE_")) {
     throw new Error("The server Google OAuth client ID is not configured.");
   }
-  const verified = await jwtVerify(match[1], GOOGLE_KEYS, {
-    issuer: GOOGLE_ISSUERS,
-    audience: env.GOOGLE_WEB_CLIENT_ID
-  });
-  if (!verified.payload.sub || !verified.payload.email_verified) throw new Error("A verified Google account is required.");
-  return verified.payload;
+  const parts = match[1].split(".");
+  if (parts.length !== 3) throw new Error("Invalid Google ID token.");
+  let header, payload;
+  try {
+    header = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0])));
+    payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[1])));
+  } catch (_) {
+    throw new Error("Invalid Google ID token.");
+  }
+  if (header.alg !== "RS256" || !header.kid) throw new Error("Unsupported Google ID token signature.");
+  let keys = await getGoogleKeys();
+  let jwk = keys.find(key => key.kid === header.kid && key.kty === "RSA" && key.use === "sig");
+  if (!jwk) {
+    keys = await getGoogleKeys(true);
+    jwk = keys.find(key => key.kid === header.kid && key.kty === "RSA" && key.use === "sig");
+  }
+  if (!jwk) throw new Error("Google signing key was not found.");
+  const publicKey = await crypto.subtle.importKey(
+    "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]
+  );
+  const signatureValid = await crypto.subtle.verify(
+    { name: "RSASSA-PKCS1-v1_5" }, publicKey, decodeBase64Url(parts[2]),
+    new TextEncoder().encode(parts[0] + "." + parts[1])
+  );
+  const now = Math.floor(Date.now() / 1000);
+  const issuerValid = GOOGLE_ISSUERS.includes(payload.iss);
+  const audienceValid = payload.aud === env.GOOGLE_WEB_CLIENT_ID;
+  if (!signatureValid || !issuerValid || !audienceValid || !payload.sub
+      || !payload.email_verified || !Number.isFinite(payload.exp) || payload.exp <= now
+      || (payload.iat && payload.iat > now + 60)) {
+    throw new Error("Google ID token is invalid or expired.");
+  }
+  return payload;
 }
 
 export default {
