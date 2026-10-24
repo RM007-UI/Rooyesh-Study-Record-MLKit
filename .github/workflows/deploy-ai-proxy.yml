@@ -53,3 +53,5 @@ jobs:
           npx wrangler deploy --var "GOOGLE_WEB_CLIENT_ID:$GOOGLE_WEB_CLIENT_ID" --var "APP_ORIGIN:null"
 
 # Trigger deployment after repository secrets and opt-in variable are configured.
+
+# Retry deployment after Cloudflare token refresh.
