@@ -77,11 +77,12 @@ const tools = [
   { type: 'function', function: { name: 'get_mood_summary', description: 'Read only the student’s saved mood check-ins, if any. Use only when they specifically ask to reflect on their mood log or ask what is saved there. Do not diagnose.', parameters: { type: 'object', properties: { range_days: { type: 'integer', description: '1 to 90 recent days; default 14.' } } } } },
   { type: 'function', function: { name: 'navigate_to_section', description: 'Open an existing section of Rooyesh on the user’s device. This is a navigation action, not a data modification.', parameters: { type: 'object', properties: { section: { type: 'string', enum: ['home', 'records', 'notes', 'planner', 'calendar', 'translator', 'learning', 'settings'] } }, required: ['section'] } } },
   { type: 'function', function: { name: 'open_study_tool', description: 'Open a specific built-in tool panel: translator, Arabic grammar lessons/practice, or the periodic table. This is navigation only.', parameters: { type: 'object', properties: { tool: { type: 'string', enum: ['translate', 'arabic', 'periodic'] } }, required: ['tool'] } } },
+  { type: 'function', function: { name: 'get_alarm_config', description: 'Read the currently saved daily reminder/alarm settings from the Android app, if the native bridge is available.', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'propose_app_action', description: 'Propose a local change. The app will show the exact change and wait for the student to tap Confirm; you must not claim success until the app reports execution. Supported actions: add_study_record, create_note, create_flashcard, set_daily_goal, create_study_plan.', parameters: { type: 'object', properties: {
-    action: { type: 'string', enum: ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan'] },
+    action: { type: 'string', enum: ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm'] },
     subject: { type: 'string' }, minutes: { type: 'integer' }, date: { type: 'string', description: 'Date in YYYY-MM-DD, if relevant.' }, note: { type: 'string' },
     title: { type: 'string' }, body: { type: 'string' }, question: { type: 'string' }, answer: { type: 'string' },
-    daily_goal_minutes: { type: 'integer' }, days: { type: 'integer' }, parts_per_day: { type: 'integer' }, start_date: { type: 'string', description: 'Start date YYYY-MM-DD, if known.' }, tasks: { type: 'array', items: { type: 'string' }, description: 'Optional ordered study tasks to place in the plan.' }
+    daily_goal_minutes: { type: 'integer' }, days: { type: 'integer' }, parts_per_day: { type: 'integer' }, start_date: { type: 'string', description: 'Start date YYYY-MM-DD, if known.' }, tasks: { type: 'array', items: { type: 'string' }, description: 'Optional ordered study tasks to place in the plan.' }, alarm_time: { type: 'string', description: 'Local 24-hour time HH:MM.' }, alarm_repeat_daily: { type: 'boolean' }, alarm_volume_percent: { type: 'integer', description: '35 to 100 percent.' }
   }, required: ['action'] } } }
 ];
 
@@ -216,6 +217,12 @@ function executeReadTool(name, args) {
     button.click();
     return { ok: true, tool: args.tool };
   }
+  if (name === 'get_alarm_config') {
+    try {
+      if (!window.RooyeshNative || typeof window.RooyeshNative.getStudyAlarmConfig !== 'function') return { available: false, message: 'Native alarm settings are not available in this environment.' };
+      return { available: true, settings: safeParse(window.RooyeshNative.getStudyAlarmConfig(), {}) };
+    } catch (error) { return { available: false, message: String(error && error.message || error).slice(0, 180) }; }
+  }
   if (name === 'propose_app_action') return proposeAction(args);
   return { error: 'Unknown tool.' };
 }
@@ -225,12 +232,14 @@ function describeAction(a) {
   if (a.action === 'create_flashcard') return tr('ساخت فلش‌کارت برای درس «' + (a.subject || '') + '»', 'Create a flashcard for "' + (a.subject || '') + '"');
   if (a.action === 'set_daily_goal') return tr('تغییر هدف روزانه به ' + a.daily_goal_minutes + ' دقیقه', 'Set daily goal to ' + a.daily_goal_minutes + ' minutes');
   if (a.action === 'create_study_plan') return tr('ساخت برنامه «' + (a.title || 'برنامه درسی') + '» برای ' + a.days + ' روز با ' + a.parts_per_day + ' پارت روزانه', 'Create plan "' + (a.title || 'Study plan') + '" for ' + a.days + ' days, ' + a.parts_per_day + ' parts/day');
+  if (a.action === 'set_alarm') return tr('تنظیم زنگ روزانه برای ساعت ' + a.alarm_time, 'Set daily alarm for ' + a.alarm_time);
+  if (a.action === 'cancel_alarm') return tr('خاموش کردن زنگ روزانه', 'Turn off the daily alarm');
   return tr('تغییر پیشنهادی رویش', 'Proposed change in Rooyesh');
 }
 function proposeAction(args) {
   const a = Object.assign({}, args || {});
   const action = String(a.action || '');
-  const allowed = ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan'];
+  const allowed = ['add_study_record', 'create_note', 'create_flashcard', 'set_daily_goal', 'create_study_plan', 'set_alarm', 'cancel_alarm'];
   if (allowed.indexOf(action) < 0) return { ok: false, message: 'Unsupported action.' };
   if (action === 'add_study_record') {
     a.subject = String(a.subject || '').trim().slice(0, 100);
@@ -251,6 +260,13 @@ function proposeAction(args) {
   } else if (action === 'set_daily_goal') {
     a.daily_goal_minutes = Number(a.daily_goal_minutes);
     if (!Number.isInteger(a.daily_goal_minutes) || a.daily_goal_minutes < 1 || a.daily_goal_minutes > 1440) return { ok: false, message: 'Daily goal must be 1–1440 whole minutes.' };
+  } else if (action === 'set_alarm') {
+    a.alarm_time = String(a.alarm_time || '').trim();
+    a.alarm_repeat_daily = typeof a.alarm_repeat_daily === 'boolean' ? a.alarm_repeat_daily : true;
+    a.alarm_volume_percent = Number(a.alarm_volume_percent == null ? 90 : a.alarm_volume_percent);
+    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(a.alarm_time) || !Number.isInteger(a.alarm_volume_percent) || a.alarm_volume_percent < 35 || a.alarm_volume_percent > 100) return { ok: false, message: 'Alarm needs a valid HH:MM time and 35–100 percent volume.' };
+  } else if (action === 'cancel_alarm') {
+    a.action = 'cancel_alarm';
   } else if (action === 'create_study_plan') {
     a.title = String(a.title || '').trim().slice(0, 100);
     a.days = Number(a.days);
@@ -277,12 +293,25 @@ function runAction(action) {
   }
   if (a.action === 'set_daily_goal') return bridge.setDailyGoal(a.daily_goal_minutes);
   if (a.action === 'create_study_plan') return bridge.createStudyPlan({ title: a.title, days: a.days, partsPerDay: a.parts_per_day, startDate: a.start_date, tasks: a.tasks });
+  if (a.action === 'set_alarm') {
+    if (!window.RooyeshNative || typeof window.RooyeshNative.scheduleStudyAlarm !== 'function') return { ok: false, message: 'Native alarm bridge is unavailable.' };
+    const status = window.RooyeshNative.scheduleStudyAlarm(a.alarm_time, a.alarm_repeat_daily, a.alarm_volume_percent);
+    if (status === 'invalid') return { ok: false, message: 'The Android app rejected the alarm time.' };
+    return { ok: true, message: status === 'permission_required' ? tr('برای فعال شدن زنگ، مجوز آلارم دقیق را در تنظیمات اندروید تأیید کن.', 'Allow exact alarms in Android settings to finish enabling the alarm.') : tr('زنگ زمان‌بندی شد.', 'Alarm scheduled.') };
+  }
+  if (a.action === 'cancel_alarm') {
+    if (!window.RooyeshNative || typeof window.RooyeshNative.cancelStudyAlarm !== 'function') return { ok: false, message: 'Native alarm bridge is unavailable.' };
+    window.RooyeshNative.cancelStudyAlarm();
+    return { ok: true, message: tr('زنگ خاموش شد.', 'Alarm turned off.') };
+  }
   return { ok: false, message: 'Unsupported action.' };
 }
 function actionCard(action) {
   const pending = action.status === 'pending';
   const outcome = action.status === 'success' ? tr('انجام شد', 'Completed') : action.status === 'rejected' ? tr('لغو شد', 'Cancelled') : action.status === 'error' ? tr('خطا در اجرا', 'Action failed') : tr('منتظر تأیید تو', 'Awaiting your approval');
-  const details = action.args.action === 'create_flashcard'
+  const details = action.args.action === 'set_alarm'
+    ? '<p>' + esc(tr('تکرار روزانه: ', 'Repeat daily: ') + (action.args.alarm_repeat_daily ? tr('بله', 'Yes') : tr('خیر', 'No')) + ' · ' + tr('صدا: ', 'Volume: ') + action.args.alarm_volume_percent + '%') + '</p>'
+    : action.args.action === 'create_flashcard'
     ? '<p><b>' + esc(tr('سؤال:', 'Question:')) + '</b> ' + esc(action.args.question) + '<br><b>' + esc(tr('پاسخ:', 'Answer:')) + '</b> ' + esc(action.args.answer) + '</p>'
     : action.args.action === 'create_note'
       ? '<p>' + esc(String(action.args.body || '').slice(0, 350)) + '</p>'
